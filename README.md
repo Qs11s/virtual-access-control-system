@@ -15,3 +15,8 @@ This project is a **pure software solution** designed to replace traditional har
 **Mobile**: WeChat Mini Program / H5  
 **QR Code**: ZXing / QRCode.js  
 **Report Export**: EasyExcel / iText  
+## Documents
+- [Project Proposal](docs/proposal.md)
+- [User Requirements Specification (URS)](docs/urs.md)
+- [Use Case Diagram (placeholder)](docs/use-case-diagram.md)
+- [Data Model (ER draft)](docs/data-model.md)
