@@ -1,0 +1,8 @@
+# Non-Functional Requirements
+
+| Requirement Type | Specific Requirements | Assignment Basis |
+|------------------|-----------------------|------------------|
+| Performance | 1. QR code verification response ≤ 1 second; 2. Report generation ≤ 10 seconds (for ≤ 1,000 data entries); 3. Support 100 concurrent users without crashes. | KPI in Section 5.1, technical selection (high availability) in Section 3.2. |
+| Security | 1. User passwords encrypted with MD5; 2. QR code anti-screenshot (refreshed every 30 seconds); 3. SQL injection prevention; 4. Audit logs cannot be tampered with. | Security optimization in Section 4.2, audit log requirements in Section 3.1.6. |
+| Compatibility | 1. Mobile terminals: WeChat Mini Program, H5; 2. Terminals: Tablets (resolution ≥ 768px); 3. Browsers: Chrome 90+, Firefox 88+. | Frontend adaptation in Section 3.2 technical selection. |
+| Usability | 1. Core functions require ≤ 3 operation steps; 2. No additional app download; 3. Interface font ≥ 14px (compatible with campus users). | User requirement “simple operation” in Section 2.2. |
