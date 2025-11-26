@@ -1,13 +1,29 @@
 package com.project.backend.controller;
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.project.backend.dto.LoginRequest;
+import com.project.backend.service.AuthService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
+@RequestMapping("/auth")
 public class AuthController {
 
-    @GetMapping("/auth/hello")
-    public String hello() {
-        return "Backend is running!";
+    private final AuthService authService;
+
+    public AuthController(AuthService authService) {
+        this.authService = authService;
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<String> register(@RequestBody LoginRequest request) {
+        String result = authService.register(request.getUsername(), request.getPassword());
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<String> login(@RequestBody LoginRequest request) {
+        String result = authService.login(request.getUsername(), request.getPassword());
+        return ResponseEntity.ok(result);
     }
 }
