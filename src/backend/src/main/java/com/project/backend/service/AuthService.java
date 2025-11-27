@@ -27,12 +27,12 @@ public class AuthService {
         return "Register success!";
     }
 
-    public String login(String username, String password) {
-        return userRepo.findByUsername(username)
-            .map(user ->
-                passwordEncoder.matches(password, user.getPassword())
-                    ? "Login success!"
-                    : "Wrong password!")
-            .orElse("User not found!");
-    }
+   public String login(String username, String password) {
+    return userRepo.findByUsername(username)
+        .map(user -> user.getPassword().equals(password)
+            ? "TOKEN:" + jwtUtil.generateToken(username)
+            : "Wrong password!"
+        )
+        .orElse("User not found!");
 }
+
