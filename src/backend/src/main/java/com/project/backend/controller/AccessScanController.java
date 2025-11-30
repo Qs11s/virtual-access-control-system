@@ -12,32 +12,41 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @RestController
-public class VerifyController {
+@RequestMapping("/access")
+public class AccessScanController {
 
     private final AccessEventRepository accessEventRepository;
     private final LocationRepository locationRepository;
     private final UserRepository userRepository;
 
-    public VerifyController(AccessEventRepository accessEventRepository,
-                            LocationRepository locationRepository,
-                            UserRepository userRepository) {
+    public AccessScanController(
+            AccessEventRepository accessEventRepository,
+            LocationRepository locationRepository,
+            UserRepository userRepository) {
         this.accessEventRepository = accessEventRepository;
         this.locationRepository = locationRepository;
         this.userRepository = userRepository;
     }
 
-    record VerifyRequest(String locationCode, String qrToken) {}
+    @PostMapping("/scan")
+    public ResponseEntity<?> scan(@RequestBody Map<String, Object> payload,
+                                  @AuthenticationPrincipal UserDetails userDetails) {
 
-    @PostMapping("/verify/qr")
-    public ResponseEntity<?> verify(@RequestBody VerifyRequest request,
-                                    @AuthenticationPrincipal UserDetails userDetails) {
+        Long locationId = Long.valueOf(payload.get("locationId").toString());
+        String method = payload.get("method").toString();
+        String qrToken = payload.containsKey("qrToken") ? payload.get("qrToken").toString() : "";
 
-        Location location = locationRepository.findByCode(request.locationCode())
+        Location location = locationRepository.findById(locationId)
                 .orElseThrow(() -> new RuntimeException("Location not found"));
 
-        boolean allowed = location.getQrToken().equals(request.qrToken());
+        boolean allowed = true;
+
+        if (method.equalsIgnoreCase("QR")) {
+            allowed = location.getQrToken().equals(qrToken);
+        }
 
         User user = userRepository.findByUsername(userDetails.getUsername())
                 .orElseThrow();
@@ -46,14 +55,16 @@ public class VerifyController {
         event.setUser(user);
         event.setLocation(location);
         event.setAccessTime(LocalDateTime.now());
-        event.setMethod("QR");
+        event.setMethod(method);
         event.setAllowed(allowed);
         accessEventRepository.save(event);
 
         if (!allowed) {
-            return ResponseEntity.status(403).body("{\"allowed\":false,\"message\":\"Invalid QR token\"}");
+            return ResponseEntity.status(403)
+                    .body(Map.of("allowed", false, "message", "Access denied"));
         }
 
-        return ResponseEntity.ok("{\"allowed\":true,\"message\":\"Access granted\"}");
+        return ResponseEntity.ok(Map.of("allowed", true, "message", "Access granted"));
     }
 }
+
