@@ -39,4 +39,11 @@ public class LocationController {
     public ResponseEntity<?> all() {
         return ResponseEntity.ok(repo.findAll());
     }
+
+    @GetMapping("/qr")
+    public ResponseEntity<?> getCurrentQr(@RequestParam Long locationId) {
+        return repo.findById(locationId)
+                .map(location -> ResponseEntity.ok(location.getQrToken()))
+                .orElse(ResponseEntity.badRequest().body("Location not found"));
+    }
 }
