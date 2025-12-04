@@ -15,6 +15,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -61,11 +62,27 @@ public class AttendanceController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Student not enrolled in this course");
         }
 
+        boolean alreadyCheckedIn = attendanceRepository.existsByStudentAndSession(student, session);
+        if (alreadyCheckedIn) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Already checked in for this session");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startTime = session.getStartTime();
+        Duration diff = Duration.between(startTime, now);
+
+        String status;
+        if (diff.isNegative() || diff.toMinutes() <= 10) {
+            status = "ON_TIME";
+        } else {
+            status = "LATE";
+        }
+
         Attendance attendance = new Attendance();
         attendance.setStudent(student);
         attendance.setSession(session);
-        attendance.setCheckInTime(LocalDateTime.now());
-        attendance.setStatus("CHECKED_IN");
+        attendance.setCheckInTime(now);
+        attendance.setStatus(status);
         attendanceRepository.save(attendance);
 
         return ResponseEntity.ok("Check-in recorded");
