@@ -2,9 +2,11 @@ package com.project.backend.controller;
 
 import com.project.backend.model.Attendance;
 import com.project.backend.model.SessionEntity;
+import com.project.backend.model.StudentCourse;
 import com.project.backend.model.User;
 import com.project.backend.repository.AttendanceRepository;
 import com.project.backend.repository.SessionRepository;
+import com.project.backend.repository.StudentCourseRepository;
 import com.project.backend.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/attendance")
@@ -22,13 +25,16 @@ public class AttendanceController {
     private final AttendanceRepository attendanceRepository;
     private final SessionRepository sessionRepository;
     private final UserRepository userRepository;
+    private final StudentCourseRepository studentCourseRepository;
 
     public AttendanceController(AttendanceRepository attendanceRepository,
                                 SessionRepository sessionRepository,
-                                UserRepository userRepository) {
+                                UserRepository userRepository,
+                                StudentCourseRepository studentCourseRepository) {
         this.attendanceRepository = attendanceRepository;
         this.sessionRepository = sessionRepository;
         this.userRepository = userRepository;
+        this.studentCourseRepository = studentCourseRepository;
     }
 
     @GetMapping("/ping")
@@ -49,6 +55,11 @@ public class AttendanceController {
 
         SessionEntity session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
+
+        Optional<StudentCourse> enrollment = studentCourseRepository.findByStudentAndCourse(student, session.getCourse());
+        if (enrollment.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Student not enrolled in this course");
+        }
 
         Attendance attendance = new Attendance();
         attendance.setStudent(student);
