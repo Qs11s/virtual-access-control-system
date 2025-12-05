@@ -1,5 +1,6 @@
 package com.project.backend.controller;
 
+import com.project.backend.dto.AttendanceSummary;
 import com.project.backend.model.Attendance;
 import com.project.backend.model.SessionEntity;
 import com.project.backend.model.StudentCourse;
@@ -17,7 +18,9 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/attendance")
@@ -64,7 +67,7 @@ public class AttendanceController {
 
         boolean alreadyCheckedIn = attendanceRepository.existsByStudentAndSession(student, session);
         if (alreadyCheckedIn) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Already checked in for this session");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Already checked in for this session");
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -86,5 +89,47 @@ public class AttendanceController {
         attendanceRepository.save(attendance);
 
         return ResponseEntity.ok("Check-in recorded");
+    }
+
+    @GetMapping("/me")
+    public List<AttendanceSummary> getMyAttendance() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
+        }
+
+        String username = auth.getName();
+        User student = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        List<Attendance> records = attendanceRepository.findByStudent(student);
+        return records.stream()
+                .map(a -> new AttendanceSummary(
+                        a.getId(),
+                        a.getStudent().getId(),
+                        a.getSession().getId(),
+                        a.getCheckInTime(),
+                        a.getCheckOutTime(),
+                        a.getStatus()
+                ))
+                .collect(Collectors.toList());
+    }
+
+    @GetMapping("/session/{sessionId}")
+    public List<AttendanceSummary> getSessionAttendance(@PathVariable Long sessionId) {
+        SessionEntity session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
+
+        List<Attendance> records = attendanceRepository.findBySession(session);
+        return records.stream()
+                .map(a -> new AttendanceSummary(
+                        a.getId(),
+                        a.getStudent().getId(),
+                        a.getSession().getId(),
+                        a.getCheckInTime(),
+                        a.getCheckOutTime(),
+                        a.getStatus()
+                ))
+                .collect(Collectors.toList());
     }
 }
