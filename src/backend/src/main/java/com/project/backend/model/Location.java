@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Entity
 @Table(name = "locations")
-@Data
+@Data // 自动为所有字段生成get/set方法，包括新增的address
 public class Location {
 
     @Id
@@ -17,4 +17,7 @@ public class Location {
     private String code;
 
     private String qrToken;
+
+    // 新增：address字段（对应Controller中调用的getAddress()方法）
+    private String address;
 }

@@ -32,6 +32,22 @@ public class SecurityConfig {
                                 "/auth/**",
                                 "/h2-console/**"
                         ).permitAll()
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        .requestMatchers(
+                                "/attendance/checkin",
+                                "/schedule/me",
+                                "/attendance/me"
+                        ).hasRole("STUDENT")
+                        .requestMatchers(
+                                "/teacher/**",
+                                "/attendance/session/*/summary"
+                        ).hasRole("TEACHER")
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/courses").hasAnyRole("STUDENT", "TEACHER", "ADMIN")
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/courses").hasRole("ADMIN")
+                        .requestMatchers(org.springframework.http.HttpMethod.PUT, "/courses/**").hasRole("ADMIN")
+                        .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/courses/**").hasRole("ADMIN")
+                        .requestMatchers("/courses/{id}/sessions").hasAnyRole("TEACHER", "ADMIN")
+                        .requestMatchers("/courses/sessions/**").hasAnyRole("TEACHER", "ADMIN")
                         .requestMatchers(
                                 "/location/**",
                                 "/access/**",
