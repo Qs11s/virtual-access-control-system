@@ -18,7 +18,9 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -47,7 +49,7 @@ public class AttendanceController {
     }
 
     @PostMapping("/checkin")
-    public ResponseEntity<String> checkIn(@RequestParam Long sessionId) {
+    public ResponseEntity<Map<String, Object>> checkIn(@RequestParam Long sessionId) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
@@ -88,7 +90,13 @@ public class AttendanceController {
         attendance.setStatus(status);
         attendanceRepository.save(attendance);
 
-        return ResponseEntity.ok("Check-in recorded");
+        // 核心修改：封装JSON响应（替换原String返回）
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("message", "Check-in recorded");
+        response.put("data", attendance);
+        response.put("code", HttpStatus.OK.value());
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/me")

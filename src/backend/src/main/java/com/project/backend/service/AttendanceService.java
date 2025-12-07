@@ -1,5 +1,8 @@
 package com.project.backend.service;
 
+import com.project.backend.exception.DuplicateCheckInException;
+import com.project.backend.exception.ExpiredSessionException;
+import com.project.backend.exception.StudentNotEnrolledException;
 import com.project.backend.model.Attendance;
 import com.project.backend.model.Course;
 import com.project.backend.model.SessionEntity;
@@ -33,21 +36,25 @@ public class AttendanceService {
         SessionEntity session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new RuntimeException("Session not found"));
 
+        LocalDateTime now = LocalDateTime.now();
+        if (now.isBefore(session.getStartTime()) || now.isAfter(session.getEndTime())) {
+            throw new ExpiredSessionException();
+        }
+
         Course course = session.getCourse();
         Optional<StudentCourse> scOpt = studentCourseRepository.findByStudentAndCourse(student, course);
         if (scOpt.isEmpty()) {
-            throw new RuntimeException("Student not enrolled in this course");
+            throw new StudentNotEnrolledException();
         }
 
         Optional<Attendance> existingOpt = attendanceRepository.findByStudentAndSession(student, session);
         if (existingOpt.isPresent()) {
             Attendance existing = existingOpt.get();
             if (existing.getCheckInTime() != null) {
-                throw new RuntimeException("Already checked in");
+                throw new DuplicateCheckInException();
             }
         }
 
-        LocalDateTime now = LocalDateTime.now();
         Attendance attendance = existingOpt.orElseGet(Attendance::new);
         attendance.setStudent(student);
         attendance.setSession(session);
