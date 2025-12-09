@@ -36,6 +36,7 @@ public class AuthController {
         User user = new User();
         user.setUsername(request.getUsername());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setRole("STUDENT");
         userRepository.save(user);
         return ResponseEntity.ok("User registered successfully");
     }

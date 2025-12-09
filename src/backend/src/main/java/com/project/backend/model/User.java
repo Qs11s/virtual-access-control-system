@@ -14,38 +14,58 @@ public class User {
 
     private String username;
     private String password;
-    
-    @Column(nullable = false)
-    private String role = "STUDENT";
 
-    public User() {}
+    @Column(nullable = false)
+    private String role = "ROLE_STUDENT";
+
+    public User() {
+        this.role = "ROLE_STUDENT";
+    }
 
     public User(String username, String password) {
         this.username = username;
         this.password = password;
+        this.role = "ROLE_STUDENT";
     }
-    
+
     public User(String username, String password, String role) {
         this.username = username;
         this.password = password;
-        if ("STUDENT".equals(role) || "TEACHER".equals(role) || "ADMIN".equals(role)) {
-            this.role = role;
-        } else {
-            this.role = "STUDENT";
-        }
+        setRole(role);
     }
 
-    public Long getId() { return id; }
-    public String getUsername() { return username; }
-    public String getPassword() { return password; }
-    public void setUsername(String username) { this.username = username; }
-    public void setPassword(String password) { this.password = password; }
-    
-    public String getRole() { return role; }
-    
+    public Long getId() {
+        return id;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
     public void setRole(String role) {
-        if ("STUDENT".equals(role) || "TEACHER".equals(role) || "ADMIN".equals(role)) {
+        if (role == null || role.isEmpty()) {
+            return;
+        }
+        if (role.startsWith("ROLE_")) {
             this.role = role;
+        } else if ("STUDENT".equals(role) || "TEACHER".equals(role) || "ADMIN".equals(role)) {
+            this.role = "ROLE_" + role;
         }
     }
 }

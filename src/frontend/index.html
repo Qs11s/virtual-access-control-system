@@ -1,72 +1,134 @@
-<!-- src/frontend/index.html -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <title>Virtual Access Door</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>Virtual Access Control System - Frontend Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="src/frontend/style.css" />
 </head>
 <body>
-  <main class="container">
-    <h1>Virtual Access Door</h1>
-    <p class="subtitle">
-      Simulate door access and record events for attendance.
-    </p>
+  <div class="app-container">
+    <header class="app-header">
+      <h1>Virtual Access Control System</h1>
+      <p class="subtitle">Simple Frontend Demo（Login / Courses / Check-in / Access）</p>
+    </header>
 
-    <form id="access-form">
-      <div class="field">
-        <label for="userId">User ID</label>
-        <input type="number" id="userId" name="userId" required />
-      </div>
+    <main id="login-view" class="view">
+      <section class="card">
+        <h2>登录</h2>
+        <form id="login-form">
+          <div class="form-group">
+            <label for="login-username">用户名</label>
+            <input id="login-username" name="username" type="text" required />
+          </div>
+          <div class="form-group">
+            <label for="login-password">密码</label>
+            <input id="login-password" name="password" type="password" required />
+          </div>
+          <button type="submit">登录</button>
+        </form>
+        <div id="login-message" class="message"></div>
+      </section>
 
-      <div class="field">
-        <label for="doorId">Door</label>
-        <select id="doorId" name="doorId" required>
-          <option value="">-- Select door --</option>
-          <option value="1">Main Entrance</option>
-          <option value="2">Lab Door</option>
-          <option value="3">Meeting Room</option>
-        </select>
-      </div>
+      <section class="card">
+        <h2>注册（默认学生角色）</h2>
+        <form id="register-form">
+          <div class="form-group">
+            <label for="register-username">用户名</label>
+            <input id="register-username" name="username" type="text" required />
+          </div>
+          <div class="form-group">
+            <label for="register-password">密码</label>
+            <input id="register-password" name="password" type="password" required />
+          </div>
+          <button type="submit">注册</button>
+        </form>
+        <div id="register-message" class="message"></div>
+      </section>
+    </main>
 
-      <div class="field">
-        <label for="method">Method</label>
-        <select id="method" name="method">
-          <option value="qr">QR Code</option>
-          <option value="otp">OTP</option>
-          <option value="password">Password</option>
-        </select>
-      </div>
+    <main id="dashboard-view" class="view" style="display:none;">
+      <section class="card">
+        <div class="flex-between">
+          <div>
+            <h2>欢迎，<span id="current-username"></span></h2>
+            <p id="current-role-text"></p>
+          </div>
+          <button id="logout-btn" class="secondary">退出登录</button>
+        </div>
+      </section>
 
-      <button type="submit">Check in</button>
-    </form>
+      <section class="card">
+        <div class="flex-between">
+          <h3>课程列表</h3>
+          <button id="refresh-courses-btn" class="secondary">刷新课程</button>
+        </div>
+        <div id="courses-message" class="message"></div>
+        <table class="table" id="courses-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>名称</th>
+              <th>代码</th>
+              <th>教师</th>
+              <th>描述</th>
+              <th id="courses-actions-header" style="display:none;">操作（管理员）</th>
+            </tr>
+          </thead>
+          <tbody id="courses-tbody"></tbody>
+        </table>
+      </section>
 
-    <div id="result" class="result"></div>
-  </main>
+      <section class="card" id="admin-create-course" style="display:none;">
+        <h3>管理员：创建课程</h3>
+        <form id="create-course-form">
+          <div class="form-group">
+            <label for="course-name">课程名称</label>
+            <input id="course-name" name="name" type="text" required />
+          </div>
+          <div class="form-group">
+            <label for="course-code">课程代码</label>
+            <input id="course-code" name="code" type="text" />
+          </div>
+          <div class="form-group">
+            <label for="course-description">描述</label>
+            <input id="course-description" name="description" type="text" />
+          </div>
+          <button type="submit">创建课程</button>
+        </form>
+        <div id="create-course-message" class="message"></div>
+      </section>
 
-  <script>
-    const form = document.getElementById('access-form');
-    const resultBox = document.getElementById('result');
+      <section class="card" id="student-checkin-section">
+        <h3>学生：课堂签到</h3>
+        <form id="checkin-form">
+          <div class="form-group">
+            <label for="session-id">Session ID</label>
+            <input id="session-id" type="number" required />
+          </div>
+          <button type="submit">签到</button>
+        </form>
+        <div id="checkin-message" class="message"></div>
+      </section>
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
+      <section class="card">
+        <h3>门禁 QR 扫描</h3>
+        <form id="access-form">
+          <div class="form-group">
+            <label for="location-id">Location ID</label>
+            <input id="location-id" type="number" required />
+          </div>
+          <div class="form-group">
+            <label for="qr-token">QR Token</label>
+            <input id="qr-token" type="text" required />
+          </div>
+          <button type="submit">尝试开门</button>
+        </form>
+        <div id="access-message" class="message"></div>
+      </section>
+    </main>
+  </div>
 
-      const payload = {
-        userId: form.userId.value,
-        doorId: form.doorId.value,
-        method: form.method.value,
-      };
-
-      // TODO: This will be achieved later.//
-      // const res = await fetch('/api/virtual-entry', { ... });
-
-      // Now assume it is successful.//
-      const now = new Date().toLocaleString();
-      resultBox.textContent =
-        `Event recorded (simulated): user ${payload.userId} ` +
-        `entered door ${payload.doorId} via ${payload.method} at ${now}.`;
-    });
-  </script>
+  <script src="src/frontend/app.js"></script>
 </body>
 </html>
-

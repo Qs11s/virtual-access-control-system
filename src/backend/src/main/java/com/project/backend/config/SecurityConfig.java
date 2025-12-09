@@ -44,10 +44,14 @@ public class SecurityConfig {
                                 "/teacher/**",
                                 "/attendance/session/*/summary"
                         ).hasRole("TEACHER")
-                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/courses").hasAnyRole("STUDENT", "TEACHER", "ADMIN")
-                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/courses").hasRole("ADMIN")
-                        .requestMatchers(org.springframework.http.HttpMethod.PUT, "/courses/**").hasRole("ADMIN")
-                        .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/courses/**").hasRole("ADMIN")
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/courses", "/courses/**")
+                            .authenticated()
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/courses", "/courses/**")
+                            .hasRole("ADMIN")
+                        .requestMatchers(org.springframework.http.HttpMethod.PUT, "/courses/**")
+                            .hasRole("ADMIN")
+                        .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/courses/**")
+                            .hasRole("ADMIN")
                         .requestMatchers("/courses/{id}/sessions").hasAnyRole("TEACHER", "ADMIN")
                         .requestMatchers("/courses/sessions/**").hasAnyRole("TEACHER", "ADMIN")
                         .requestMatchers(
