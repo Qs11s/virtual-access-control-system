@@ -87,6 +87,13 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
+
+        <!-- Test：JUnit + Spring Boot 测试、MockMvc 等 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -94,9 +101,8 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
-                <version>3.2.2</version> <!-- 新增：指定插件版本，与父工程一致 -->
+                <version>3.2.2</version>
                 <executions>
-                    <!-- 新增：绑定repackage目标，让Maven识别spring-boot指令 -->
                     <execution>
                         <goals>
                             <goal>repackage</goal>
@@ -104,7 +110,6 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <!-- 保留：排除Lombok避免打包冲突 -->
                     <excludes>
                         <exclude>
                             <groupId>org.projectlombok</groupId>
