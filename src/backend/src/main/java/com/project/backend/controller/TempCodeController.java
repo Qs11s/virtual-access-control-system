@@ -1,8 +1,10 @@
 package com.project.backend.controller;
 
 import com.project.backend.model.AccessEvent;
+import com.project.backend.model.Location; // 新增导入
 import com.project.backend.model.TempCode;
 import com.project.backend.repository.AccessEventRepository;
+import com.project.backend.repository.LocationRepository; // 新增导入
 import com.project.backend.repository.TempCodeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +24,9 @@ public class TempCodeController {
 
     @Autowired
     private AccessEventRepository accessEventRepository;
+
+    @Autowired // 新增：注入LocationRepository
+    private LocationRepository locationRepository;
 
     private final Random random = new Random();
 
@@ -70,10 +75,15 @@ public class TempCodeController {
         }
         tempCodeRepository.save(tempCode);
 
+        // 核心修复：查询数据库中已存在的Location，而非新建
+        Location location = locationRepository.findById(request.getLocationId())
+                .orElseThrow(() -> new RuntimeException("Location not found"));
+
         AccessEvent accessEvent = new AccessEvent();
-        accessEvent.setLocationId(request.getLocationId());
+        accessEvent.setLocation(location); // 关联已存在的Location
         accessEvent.setAccessTime(now);
-        accessEvent.setAccessMethod("TEMP_CODE");
+        accessEvent.setMethod("TEMP_CODE");
+        accessEvent.setAllowed(true);
         accessEvent.setStatus("ALLOWED");
         accessEventRepository.save(accessEvent);
 
@@ -82,12 +92,14 @@ public class TempCodeController {
         return ResponseEntity.ok(response);
     }
 
+    // 内部请求类（保持不变）
     public static class TempCodeGenerateRequest {
         private Long locationId;
         private Long ownerId;
         private Integer validMinutes;
         private Integer remainingUses;
 
+        // getter/setter保持不变
         public Long getLocationId() { return locationId; }
         public void setLocationId(Long locationId) { this.locationId = locationId; }
         public Long getOwnerId() { return ownerId; }
@@ -102,6 +114,7 @@ public class TempCodeController {
         private Long locationId;
         private String code;
 
+        // getter/setter保持不变
         public Long getLocationId() { return locationId; }
         public void setLocationId(Long locationId) { this.locationId = locationId; }
         public String getCode() { return code; }

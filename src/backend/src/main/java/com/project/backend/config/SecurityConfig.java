@@ -3,6 +3,7 @@ package com.project.backend.config;
 import com.project.backend.security.JwtFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -35,35 +36,70 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(eh -> eh
-                        .authenticationEntryPoint((req, res, ex) -> res.sendError(401))
-                        .accessDeniedHandler((req, res, ex) -> res.sendError(403))
+                        .authenticationEntryPoint((req, res, ex) -> {
+                            res.setStatus(401);
+                            res.setContentType("application/json");
+                            res.getWriter().write("{\"message\":\"未认证\"}");
+                        })
+                        .accessDeniedHandler((req, res, ex) -> {
+                            res.setStatus(403);
+                            res.setContentType("application/json");
+                            res.getWriter().write("{\"message\":\"权限不足\"}");
+                        })
                 )
+                // 允许H2控制台的iframe访问
+                .headers(headers -> headers.frameOptions(frame -> frame.disable()))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/auth/**", "/h2-console/**").permitAll()
-
+                        // 公开访问的路径
+                        .requestMatchers(
+                                "/",
+                                "/auth/**",
+                                "/h2-console/**"
+                        ).permitAll()
+                        
+                        // 管理端路径 - ADMIN角色
                         .requestMatchers("/admin/**").hasRole("ADMIN")
+                        
+                        // 教师端路径 - TEACHER角色
                         .requestMatchers("/teacher/**").hasRole("TEACHER")
-
-                        // summary 只要求“已登录”，具体角色在 Controller 里判断
-                        .requestMatchers("/attendance/session/*/summary").authenticated()
-
-                        // 其余 /attendance/** 也只要求已登录
-                        .requestMatchers("/attendance/**").authenticated()
-
-                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/courses", "/courses/**").authenticated()
-                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/courses", "/courses/**").hasRole("ADMIN")
-                        .requestMatchers(org.springframework.http.HttpMethod.PUT, "/courses/**").hasRole("ADMIN")
-                        .requestMatchers(org.springframework.http.HttpMethod.DELETE, "/courses/**").hasRole("ADMIN")
-                        .requestMatchers("/courses/*/sessions").hasAnyRole("TEACHER", "ADMIN")
-                        .requestMatchers("/courses/sessions/**").hasAnyRole("TEACHER", "ADMIN")
-
-                        .requestMatchers("/location/**", "/access/**").permitAll()
+                        
+                        // 考勤相关路径配置
+                        .requestMatchers(HttpMethod.GET, "/attendance/me").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/attendance/checkin").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/attendance/session/**").authenticated()
+                        
+                        // 课程相关路径配置（关键修复部分）
+                        // GET /courses - 所有认证用户可访问
+                        .requestMatchers(HttpMethod.GET, "/courses").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/courses/*").authenticated()
+                        
+                        // POST/PUT/DELETE /courses - 仅ADMIN角色
+                        .requestMatchers(HttpMethod.POST, "/courses").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/courses/*").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/courses/*").hasRole("ADMIN")
+                        
+                        // 课程会话相关 - TEACHER和ADMIN角色
+                        .requestMatchers(HttpMethod.GET, "/courses/*/sessions").hasAnyRole("TEACHER", "ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/courses/sessions").hasAnyRole("TEACHER", "ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/courses/sessions/*").hasAnyRole("TEACHER", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/courses/sessions/*").hasAnyRole("TEACHER", "ADMIN")
+                        
+                        // 我的信息相关
+                        .requestMatchers("/me/**").authenticated()
+                        
+                        // 门禁相关路径
+                        .requestMatchers("/access/**").permitAll()
+                        .requestMatchers("/verify/**").permitAll()
+                        .requestMatchers("/location/**").permitAll()
+                        
+                        // 记录相关
+                        .requestMatchers("/records/**").authenticated()
+                        
+                        // 其他所有请求需要认证
                         .anyRequest().authenticated()
-                );
-
-        http.headers(headers -> headers.frameOptions(frame -> frame.disable()));
-        http.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
-
+                )
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+        
         return http.build();
     }
 
@@ -76,9 +112,11 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of("*"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE"));
-        config.setAllowedHeaders(List.of("Authorization", "Content-Type"));
-        config.setExposedHeaders(List.of("*"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
+        config.setExposedHeaders(List.of("Authorization"));
+        config.setMaxAge(3600L);
+        
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;

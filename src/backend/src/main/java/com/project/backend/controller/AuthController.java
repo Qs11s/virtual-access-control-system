@@ -9,6 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -42,18 +44,24 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<String> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<Map<String, String>> login(@RequestBody LoginRequest request) { // 修改返回类型为Map
         Optional<User> optionalUser = userRepository.findByUsername(request.getUsername());
         if (optionalUser.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body("Invalid username or password");
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Invalid username or password");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
         }
         User user = optionalUser.get();
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body("Invalid username or password");
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("message", "Invalid username or password");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
         }
         String token = jwtUtil.generateToken(user.getUsername());
-        return ResponseEntity.ok(token);
+        
+        // 返回JSON格式，包含token字段（匹配测试类预期）
+        Map<String, String> successResponse = new HashMap<>();
+        successResponse.put("token", token);
+        return ResponseEntity.ok(successResponse);
     }
 }

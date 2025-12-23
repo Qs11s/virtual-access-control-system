@@ -1,0 +1,56 @@
+# 测试环境配置 - 覆盖主配置
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MYSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop  # 测试中使用 create-drop，每次测试后清理
+    show-sql: false  # 测试中关闭 SQL 日志，减少干扰
+    properties:
+      hibernate:
+        format_sql: true
+  
+  # 禁用 SQL 初始化脚本（测试中自己管理数据）
+  sql:
+    init:
+      mode: never
+  
+  # H2 控制台在测试中不需要
+  h2:
+    console:
+      enabled: false
+  
+  # 安全配置（根据测试需要调整）
+  security:
+    enabled: true  # 保持启用，但使用测试配置
+
+# 日志配置
+logging:
+  level:
+    root: WARN
+    com.project.backend: INFO
+    org.springframework.security: DEBUG
+    org.springframework.test: INFO
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+
+# 测试特定配置
+test:
+  security:
+    enabled: false  # 测试中可能禁用安全
+
+# 管理端点（健康检查）
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      enabled: true
+      show-details: always
