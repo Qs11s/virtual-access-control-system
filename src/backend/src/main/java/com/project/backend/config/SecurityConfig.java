@@ -60,6 +60,10 @@ public class SecurityConfig {
                         // 管理端路径 - ADMIN角色
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         
+                        // 新增：选课/退课接口 - ADMIN和TEACHER角色均可访问
+                        .requestMatchers(HttpMethod.POST, "/admin/courses/{courseId}/students/{studentId}").hasAnyRole("ADMIN", "TEACHER")
+                        .requestMatchers(HttpMethod.DELETE, "/admin/courses/{courseId}/students/{studentId}").hasAnyRole("ADMIN", "TEACHER")
+                        
                         // 教师端路径 - TEACHER角色
                         .requestMatchers("/teacher/**").hasRole("TEACHER")
                         
@@ -68,17 +72,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/attendance/checkin").authenticated()
                         .requestMatchers(HttpMethod.GET, "/attendance/session/**").authenticated()
                         
-                        // 课程相关路径配置（关键修复部分）
-                        // GET /courses - 所有认证用户可访问
+                        // 课程相关路径配置
                         .requestMatchers(HttpMethod.GET, "/courses").authenticated()
                         .requestMatchers(HttpMethod.GET, "/courses/*").authenticated()
-                        
-                        // POST/PUT/DELETE /courses - 仅ADMIN角色
                         .requestMatchers(HttpMethod.POST, "/courses").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/courses/*").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/courses/*").hasRole("ADMIN")
-                        
-                        // 课程会话相关 - TEACHER和ADMIN角色
                         .requestMatchers(HttpMethod.GET, "/courses/*/sessions").hasAnyRole("TEACHER", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/courses/sessions").hasAnyRole("TEACHER", "ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/courses/sessions/*").hasAnyRole("TEACHER", "ADMIN")
@@ -87,8 +86,10 @@ public class SecurityConfig {
                         // 我的信息相关
                         .requestMatchers("/me/**").authenticated()
                         
-                        // 门禁相关路径
-                        .requestMatchers("/access/**").permitAll()
+                        // 门禁相关路径（核心修改：限制临时码创建为ADMIN角色，验证公开）
+                        .requestMatchers(HttpMethod.POST, "/access/temp-code").hasRole("ADMIN") // 仅管理员可创建
+                        .requestMatchers(HttpMethod.POST, "/access/temp-code/verify").permitAll() // 验证公开
+                        .requestMatchers("/access/**").permitAll() // 其他门禁路径保持公开
                         .requestMatchers("/verify/**").permitAll()
                         .requestMatchers("/location/**").permitAll()
                         

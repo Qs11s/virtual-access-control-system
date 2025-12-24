@@ -13,10 +13,10 @@ public class StudentCourse {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "student_id")
+    @JoinColumn(name = "student_id", nullable = false) // 新增：非空约束
     private User student;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "course_id")
+    @JoinColumn(name = "course_id", nullable = false) // 新增：非空约束
     private Course course;
 }
