@@ -60,17 +60,20 @@ CREATE TABLE student_courses (
 
 -- 第五步：插入测试数据（手动指定ID，确保与测试用例匹配）
 -- 用户数据
+-- 修改后的用户数据部分（以你提供的data.sql为例）
+-- 用户数据
 INSERT INTO users (id, username, password, role)
-VALUES (1, 'admin2', '$2b$10$ZW2NeWxUmrg2dq6QBTCoQ.K5lkQe1kJokCPssJwCRBE4cDZDAdfkm', 'ROLE_ADMIN');
+VALUES (1, 'admin2', '{noop}admin123', 'ROLE_ADMIN');
 
 INSERT INTO users (id, username, password, role)
-VALUES (3, 'teacher1', '$2b$10$r/QIOuAJLJmEWiGn2c6oYO1837pgN7VIbb7sp2xfpy71EGPrUtWW2', 'ROLE_TEACHER');
+VALUES (3, 'teacher1', '{noop}teacher123', 'ROLE_TEACHER');
 
 INSERT INTO users (id, username, password, role)
-VALUES (2, 'student1', '$2b$10$oGlFYw0XlvSFP72bowyg2e.0Aq.dkJzLFKvZkt.zLQl1IduDC0Aua', 'ROLE_STUDENT');
+VALUES (2, 'student1', '{noop}student123', 'ROLE_STUDENT');
 
 INSERT INTO users (id, username, password, role)
-VALUES (4, 'test2', '$2b$10$z1IQ22QTGBiAsmjo3SFdEOJJId.Os0iHjhlT5Od4GKi6aWKYTbDFK', 'ROLE_STUDENT');
+VALUES (4, 'test2', '{noop}test123', 'ROLE_STUDENT');
+-- ... 其他部分保持不变
 
 -- 地点数据（确保ID=1/2插入成功）
 INSERT INTO locations (id, code, name, qr_token, address)
