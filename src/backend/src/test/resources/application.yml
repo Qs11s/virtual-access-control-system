@@ -1,56 +1,66 @@
-# 测试环境配置 - 覆盖主配置
+# 测试环境配置 - 启用所有功能
 spring:
+  # 数据源配置 - H2内存数据库
   datasource:
     url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MYSQL
     driver-class-name: org.h2.Driver
     username: sa
     password:
   
+  # JPA/Hibernate配置
   jpa:
     database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
-      ddl-auto: create-drop  # 测试中使用 create-drop，每次测试后清理
-    show-sql: false  # 测试中关闭 SQL 日志，减少干扰
+      ddl-auto: create-drop  # 测试中自动创建表结构，结束后清理
+    show-sql: true  # 启用SQL日志，便于调试
     properties:
       hibernate:
-        format_sql: true
+        format_sql: true  # 格式化SQL输出，增强可读性
   
-  # 禁用 SQL 初始化脚本（测试中自己管理数据）
+  # 启用SQL初始化脚本（测试数据初始化）
   sql:
     init:
-      mode: never
+      mode: always  # 总是执行初始化脚本
+      schema-locations: classpath:sql/schema.sql  # 指定schema脚本路径
+      data-locations: classpath:sql/data.sql  # 指定数据初始化脚本
   
-  # H2 控制台在测试中不需要
+  # 启用H2控制台（测试中可直接访问数据库）
   h2:
     console:
-      enabled: false
+      enabled: true
+      path: /h2-console  # 控制台访问路径
+      settings:
+        web-allow-others: true  # 允许外部访问（仅测试环境）
   
-  # 安全配置（根据测试需要调整）
+  # 安全配置
   security:
-    enabled: true  # 保持启用，但使用测试配置
+    enabled: true
 
-# 日志配置
+# 日志配置（详细输出便于调试）
 logging:
   level:
-    root: WARN
-    com.project.backend: INFO
-    org.springframework.security: DEBUG
+    root: INFO
+    com.project.backend: DEBUG  # 项目核心包开启DEBUG日志
+    org.springframework.security: DEBUG  # 安全相关日志详细输出
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG  # Hibernate SQL日志
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE  # 显示SQL参数绑定
     org.springframework.test: INFO
-    org.hibernate.SQL: WARN
-    org.hibernate.type.descriptor.sql.BasicBinder: WARN
 
-# 测试特定配置
+# 测试环境安全功能配置
 test:
   security:
-    enabled: false  # 测试中可能禁用安全
+    enabled: true  # 启用安全验证，测试完整权限控制
 
-# 管理端点（健康检查）
+# 管理端点（暴露所有可用端点）
 management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,metrics,prometheus  # 暴露更多监控端点
   endpoint:
     health:
       enabled: true
-      show-details: always
+      show-details: always  # 显示详细健康信息
+    metrics:
+      enabled: true  # 启用指标监控
