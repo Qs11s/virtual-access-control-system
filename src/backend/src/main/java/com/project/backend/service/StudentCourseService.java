@@ -1,6 +1,5 @@
 package com.project.backend.service;
 
-import com.project.backend.dto.StudentCourseResponse;
 import com.project.backend.model.Course;
 import com.project.backend.model.StudentCourse;
 import com.project.backend.model.User;
@@ -11,10 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
-
 @Service
-@Transactional // 保证选课/退课操作的事务一致性
+@Transactional
 public class StudentCourseService {
 
     @Autowired
@@ -27,66 +24,49 @@ public class StudentCourseService {
     private CourseRepository courseRepository;
 
     /**
-     * 选课操作：将学生关联到课程
+     * 选课：按学生ID+课程ID关联
      */
-    public StudentCourseResponse enrollStudent(Long studentId, Long courseId) {
-        StudentCourseResponse response = new StudentCourseResponse();
-
-        // 1. 验证学生是否存在且为 STUDENT 角色
-        Optional<User> studentOpt = userRepository.findByIdAndRole(studentId, "ROLE_STUDENT");
-        if (studentOpt.isEmpty()) {
-            response.setStatus("fail");
-            response.setMessage("学生不存在或角色无效（仅学生可选课）");
-            return response;
+    public void enroll(Long studentId, Long courseId) {
+        // 1. 校验学生存在且为学生角色
+        User student = userRepository.findById(studentId)
+                .orElseThrow(() -> new RuntimeException("学生不存在：ID=" + studentId));
+        if (!"ROLE_STUDENT".equals(student.getRole())) {
+            throw new RuntimeException("用户不是学生角色：ID=" + studentId);
         }
 
-        // 2. 验证课程是否存在
-        Optional<Course> courseOpt = courseRepository.findById(courseId);
-        if (courseOpt.isEmpty()) {
-            response.setStatus("fail");
-            response.setMessage("课程不存在");
-            return response;
-        }
+        // 2. 校验课程存在
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new RuntimeException("课程不存在：ID=" + courseId));
 
-        // 3. 检查是否已选课（避免重复）
+        // 3. 校验是否已选课（调用仓库的existsByStudentIdAndCourseId）
         if (studentCourseRepository.existsByStudentIdAndCourseId(studentId, courseId)) {
-            response.setStatus("fail");
-            response.setMessage("该学生已选此课程，无需重复选课");
-            return response;
+            throw new RuntimeException("学生已选该课程：学生ID=" + studentId + "，课程ID=" + courseId);
         }
 
         // 4. 新增选课关系
         StudentCourse studentCourse = new StudentCourse();
-        studentCourse.setStudent(studentOpt.get());
-        studentCourse.setCourse(courseOpt.get());
+        studentCourse.setStudent(student);
+        studentCourse.setCourse(course);
         studentCourseRepository.save(studentCourse);
-
-        // 5. 构建成功响应
-        response.setStatus("success");
-        response.setMessage("选课成功");
-        return response;
     }
 
     /**
-     * 退课操作：删除学生与课程的关联关系
+     * 退课：按学生ID+课程ID解除关联
      */
-    public StudentCourseResponse unenrollStudent(Long studentId, Long courseId) {
-        StudentCourseResponse response = new StudentCourseResponse();
-
-        // 1. 检查是否存在选课关系
-        boolean exists = studentCourseRepository.existsByStudentIdAndCourseId(studentId, courseId);
-        if (!exists) {
-            response.setStatus("success");
-            response.setMessage("该学生未选此课程，无需退课");
-            return response;
+    public void unenroll(Long studentId, Long courseId) {
+        // 1. 校验是否已选课
+        if (!studentCourseRepository.existsByStudentIdAndCourseId(studentId, courseId)) {
+            throw new RuntimeException("学生未选该课程：学生ID=" + studentId + "，课程ID=" + courseId);
         }
 
-        // 2. 删除选课关系
+        // 2. 删除选课关系（调用仓库的deleteByStudentIdAndCourseId）
         studentCourseRepository.deleteByStudentIdAndCourseId(studentId, courseId);
+    }
 
-        // 3. 构建成功响应
-        response.setStatus("success");
-        response.setMessage("退课成功");
-        return response;
+    /**
+     * 检查学生是否已选某课程
+     */
+    public boolean isEnrolled(Long studentId, Long courseId) {
+        return studentCourseRepository.existsByStudentIdAndCourseId(studentId, courseId);
     }
 }
