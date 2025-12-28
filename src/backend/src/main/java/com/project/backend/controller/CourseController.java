@@ -51,7 +51,7 @@ public class CourseController {
         String username = authentication.getName();
 
         // 2. 查询用户
-        User user = userRepository.findByUsername(username)
+        User user = userRepository.findFirstByUsernameOrderByIdDesc(username)
                 .orElseThrow(() -> new RuntimeException("用户不存在：" + username));
 
         // 3. 查询已选课程

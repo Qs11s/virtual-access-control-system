@@ -60,7 +60,7 @@ public class AttendanceController {
 
         // 2. 查学生
         String username = auth.getName();
-        User student = userRepository.findByUsername(username)
+        User student = userRepository.findFirstByUsernameOrderByIdDesc(username)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         // 3. 查 session
@@ -120,7 +120,7 @@ public class AttendanceController {
         }
 
         String username = auth.getName();
-        User student = userRepository.findByUsername(username)
+        User student = userRepository.findFirstByUsernameOrderByIdDesc(username)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         List<Attendance> records = attendanceRepository.findByStudent(student);

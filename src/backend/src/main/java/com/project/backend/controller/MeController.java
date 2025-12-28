@@ -38,7 +38,7 @@ public class MeController {
     @GetMapping("/courses")
     public ResponseEntity<List<CourseDto>> getMyCourses(Authentication authentication) {
         String username = authentication.getName();
-        User currentStudent = userRepository.findByUsername(username)
+        User currentStudent = userRepository.findFirstByUsernameOrderByIdDesc(username)
                 .orElseThrow(() -> new RuntimeException("用户不存在"));
 
         List<CourseDto> myCourses = studentCourseRepository.findByStudent(currentStudent).stream()
@@ -53,7 +53,7 @@ public class MeController {
     @GetMapping("/attendance")
     public ResponseEntity<List<AttendanceSummary>> getMyAttendance(Authentication authentication) {
         String username = authentication.getName();
-        User currentStudent = userRepository.findByUsername(username)
+        User currentStudent = userRepository.findFirstByUsernameOrderByIdDesc(username)
                 .orElseThrow(() -> new RuntimeException("用户不存在"));
 
         List<AttendanceSummary> myAttendance = attendanceRepository.findByStudent(currentStudent).stream()

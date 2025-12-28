@@ -39,7 +39,7 @@ public class VerifyController {
 
         boolean allowed = location.getQrToken().equals(request.qrToken());
 
-        User user = userRepository.findByUsername(userDetails.getUsername())
+        User user = userRepository.findFirstByUsernameOrderByIdDesc(userDetails.getUsername())
                 .orElseThrow();
 
         AccessEvent event = new AccessEvent();

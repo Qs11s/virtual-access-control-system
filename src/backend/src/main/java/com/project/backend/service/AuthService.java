@@ -20,7 +20,7 @@ public class AuthService {
     }
 
     public String register(String username, String password) {
-        if (userRepo.findByUsername(username).isPresent()) {
+        if (userRepo.findFirstByUsernameOrderByIdDesc(username).isPresent()) {
             return "Username already exists!";
         }
         User user = new User(username, passwordEncoder.encode(password));
@@ -29,7 +29,7 @@ public class AuthService {
     }
 
     public String login(String username, String password) {
-        return userRepo.findByUsername(username)
+        return userRepo.findFirstByUsernameOrderByIdDesc(username)
                 .map(user -> passwordEncoder.matches(password, user.getPassword())
                         ? jwtUtil.generateToken(username)
                         : "Wrong password!")

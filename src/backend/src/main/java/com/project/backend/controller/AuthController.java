@@ -31,7 +31,7 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<String> register(@RequestBody LoginRequest request) {
-        Optional<User> existing = userRepository.findByUsername(request.getUsername());
+        Optional<User> existing = userRepository.findFirstByUsernameOrderByIdDesc(request.getUsername());
         if (existing.isPresent()) {
             return ResponseEntity.badRequest().body("Username already exists");
         }
@@ -45,7 +45,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<Map<String, String>> login(@RequestBody LoginRequest request) { // 修改返回类型为Map
-        Optional<User> optionalUser = userRepository.findByUsername(request.getUsername());
+        Optional<User> optionalUser = userRepository.findFirstByUsernameOrderByIdDesc(request.getUsername());
         if (optionalUser.isEmpty()) {
             Map<String, String> errorResponse = new HashMap<>();
             errorResponse.put("message", "Invalid username or password");
