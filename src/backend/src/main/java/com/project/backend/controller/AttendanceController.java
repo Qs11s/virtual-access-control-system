@@ -52,41 +52,34 @@ public class AttendanceController {
 
     @PostMapping("/checkin")
     public ResponseEntity<Map<String, Object>> checkIn(@RequestBody AttendanceRequest request) {
-        // 1. 校验登录
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
         }
 
-        // 2. 查学生
         String username = auth.getName();
         User student = userRepository.findFirstByUsernameOrderByIdDesc(username)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
-        // 3. 查 session
         Long sessionId = request.getSessionId();
         SessionEntity session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
 
-        // 4. 判断是否已选课
         Optional<StudentCourse> enrollment = studentCourseRepository.findByStudentAndCourse(student, session.getCourse());
         if (enrollment.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Student not enrolled in this course");
         }
 
-        // 5. 判断是否重复签到
         boolean alreadyCheckedIn = attendanceRepository.existsByStudentAndSession(student, session);
         if (alreadyCheckedIn) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Already checked in for this session");
         }
 
-        // 6. 计算状态（准时/迟到）
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime startTime = session.getStartTime();
         Duration diff = Duration.between(startTime, now);
         String status = (diff.isNegative() || diff.toMinutes() <= 10) ? "ON_TIME" : "LATE";
 
-        // 7. 保存考勤记录（实体）
         Attendance attendance = new Attendance();
         attendance.setStudent(student);
         attendance.setSession(session);
@@ -94,7 +87,6 @@ public class AttendanceController {
         attendance.setStatus(status);
         attendanceRepository.save(attendance);
 
-        // 8. 用 DTO 封装返回，避免直接返回实体导致 Hibernate 代理序列化问题
         AttendanceSummary summary = new AttendanceSummary(
                 attendance.getId(),
                 attendance.getStudent().getId(),
@@ -120,10 +112,10 @@ public class AttendanceController {
         }
 
         String username = auth.getName();
-        User student = userRepository.findFirstByUsernameOrderByIdDesc(username)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
-        List<Attendance> records = attendanceRepository.findByStudent(student);
+        List<Attendance> records = attendanceRepository
+                .findByStudent_UsernameOrderByCheckInTimeDesc(username);
+
         return records.stream()
                 .map(a -> new AttendanceSummary(
                         a.getId(),
@@ -156,13 +148,11 @@ public class AttendanceController {
 
     @GetMapping("/session/{sessionId}/summary")
     public Map<String, Object> getSessionSummary(@PathVariable Long sessionId) {
-        // 1. 先检查是否登录：没登录返回 401
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
         }
 
-        // 2. 检查角色：只有 TEACHER 或 ADMIN 能看，其他登录用户返回 403
         boolean hasTeacherOrAdmin = auth.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .anyMatch(a -> a.equals("ROLE_TEACHER") || a.equals("ROLE_ADMIN"));
@@ -171,7 +161,6 @@ public class AttendanceController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only teacher or admin can view this summary");
         }
 
-        // 3. 正常返回统计结果
         SessionEntity session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
 

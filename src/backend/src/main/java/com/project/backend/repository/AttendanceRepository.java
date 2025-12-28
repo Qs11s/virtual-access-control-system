@@ -21,4 +21,8 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
     boolean existsByStudentAndSession(User student, SessionEntity session);
 
     long countByStatus(String status);
+
+    Optional<Attendance> findFirstBySession_IdAndStudent_UsernameOrderByIdDesc(Long sessionId, String username);
+
+    List<Attendance> findByStudent_UsernameOrderByCheckInTimeDesc(String username);
 }
