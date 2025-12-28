@@ -20,7 +20,7 @@ import java.io.IOException;
 public class JwtFilter extends OncePerRequestFilter {
 
     private static final Logger logger = LoggerFactory.getLogger(JwtFilter.class);
-    
+
     private final JwtUtil jwtUtil;
     private final UserDetailsService userDetailsService;
 
@@ -35,7 +35,6 @@ public class JwtFilter extends OncePerRequestFilter {
                                     FilterChain chain)
             throws ServletException, IOException {
 
-        String path = request.getServletPath();
         String header = request.getHeader("Authorization");
         String username = null;
         String token = null;
@@ -46,7 +45,7 @@ public class JwtFilter extends OncePerRequestFilter {
             return;
         }
 
-        // 提取Token
+        // 提取 Token
         if (header != null && header.startsWith("Bearer ")) {
             token = header.substring(7);
             try {
@@ -59,18 +58,28 @@ public class JwtFilter extends OncePerRequestFilter {
             logger.debug("未找到Authorization头或格式不正确");
         }
 
-        // 验证Token并设置认证
+        // 验证 Token 并设置认证信息到 SecurityContext
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-            
-            if (jwtUtil.validateToken(token, userDetails)) {
-                UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authToken);
-                logger.debug("为用户 {} 设置认证信息", username);
-            } else {
-                logger.warn("Token验证失败，用户: {}", username);
+            try {
+                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+                if (jwtUtil.validateToken(token, userDetails)) {
+                    UsernamePasswordAuthenticationToken authToken =
+                            new UsernamePasswordAuthenticationToken(
+                                    userDetails,
+                                    null,
+                                    userDetails.getAuthorities()
+                            );
+                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authToken);
+                    logger.debug("为用户 {} 设置认证信息", username);
+                } else {
+                    logger.warn("Token验证失败，用户: {}", username);
+                }
+            } catch (Exception e) {
+                // 这里捕获 userDetailsService.loadUserByUsername 或 token 验证过程中的异常，
+                // 避免异常直接打断 filter chain；认证失败将由后续 Spring Security 处理为 401/403
+                logger.error("设置认证信息失败: {}", e.getMessage());
             }
         } else if (username == null) {
             logger.debug("未提供有效Token，请求将被拒绝");
@@ -79,16 +88,23 @@ public class JwtFilter extends OncePerRequestFilter {
         chain.doFilter(request, response);
     }
 
+    /**
+     * 仅跳过明确允许匿名访问的路径。
+     * 注意：/access/temp-code（创建临时码）必须走 JWT 认证，因此不能跳过 /access/**。
+     * 只有 /access/temp-code/verify 是公开接口。
+     */
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getServletPath();
-        boolean shouldNotFilter = path.equals("/") || 
-                                 path.startsWith("/auth/") ||
-                                 path.startsWith("/h2-console/") ||
-                                 path.startsWith("/access/") ||
-                                 path.startsWith("/verify/") ||
-                                 path.startsWith("/location/");
-        
+
+        boolean shouldNotFilter =
+                path.equals("/") ||
+                path.startsWith("/auth/") ||
+                path.startsWith("/h2-console/") ||
+                path.startsWith("/verify/") ||
+                path.startsWith("/location/") ||
+                path.equals("/access/temp-code/verify");
+
         logger.debug("路径 {} 是否需要过滤: {}", path, !shouldNotFilter);
         return shouldNotFilter;
     }

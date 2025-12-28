@@ -34,15 +34,13 @@ public class MeController {
         this.attendanceRepository = attendanceRepository;
     }
 
-    // 新增：GET /me/courses - 查询当前学生已选课程列表
+    // GET /me/courses - 查询当前学生已选课程列表
     @GetMapping("/courses")
     public ResponseEntity<List<CourseDto>> getMyCourses(Authentication authentication) {
-        // 获取当前登录用户
         String username = authentication.getName();
         User currentStudent = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("用户不存在"));
 
-        // 查询学生选课记录并转换为CourseDto
         List<CourseDto> myCourses = studentCourseRepository.findByStudent(currentStudent).stream()
                 .map(StudentCourse::getCourse)
                 .map(this::convertToCourseDto)
@@ -51,7 +49,7 @@ public class MeController {
         return ResponseEntity.ok(myCourses);
     }
 
-    // 复用：GET /me/attendance - 查询当前学生考勤记录（与AttendanceController功能一致，统一路径）
+    // GET /me/attendance - 查询当前学生考勤记录
     @GetMapping("/attendance")
     public ResponseEntity<List<AttendanceSummary>> getMyAttendance(Authentication authentication) {
         String username = authentication.getName();
@@ -72,13 +70,19 @@ public class MeController {
         return ResponseEntity.ok(myAttendance);
     }
 
-    // 私有方法：Course转CourseDto（与现有CourseController中的转换逻辑一致）
+    // 私有方法：Course -> CourseDto（适配新的 CourseDto 字段）
     private CourseDto convertToCourseDto(Course course) {
         CourseDto dto = new CourseDto();
         dto.setId(course.getId());
         dto.setName(course.getName());
-        dto.setTeacher(course.getTeacher());
+        dto.setCode(course.getCode());
         dto.setDescription(course.getDescription());
+
+        if (course.getTeacher() != null) {
+            dto.setTeacherId(course.getTeacher().getId());
+            dto.setTeacherUsername(course.getTeacher().getUsername());
+        }
+
         return dto;
     }
 }

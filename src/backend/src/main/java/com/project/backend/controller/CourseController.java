@@ -16,7 +16,6 @@ import com.project.backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -37,32 +36,32 @@ public class CourseController {
     @Autowired
     private AttendanceRepository attendanceRepository;
 
-    // 新增：选课关联仓库
     @Autowired
     private StudentCourseRepository studentCourseRepository;
 
-    // 新增：用户仓库
     @Autowired
     private UserRepository userRepository;
 
-    // 新增：我的课程接口
+    /**
+     * 我的课程：当前登录用户已选课程列表
+     */
     @GetMapping("/my")
     public ResponseEntity<List<CourseDto>> getMyCourses(Authentication authentication) {
         // 1. 获取当前登录用户名
-        String username = ((UserDetails) authentication.getPrincipal()).getUsername();
-        
-        // 2. 查询用户信息
+        String username = authentication.getName();
+
+        // 2. 查询用户
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("用户不存在：" + username));
-        
+
         // 3. 查询已选课程
-        List<StudentCourse> studentCourses = studentCourseRepository.findByStudent(user);
-        
-        // 4. 转换为CourseDto
+        List<StudentCourse> studentCourses = studentCourseRepository.findByStudent_Id(user.getId());
+
+        // 4. 转换为 DTO
         List<CourseDto> courseDtos = studentCourses.stream()
                 .map(sc -> convertToCourseDto(sc.getCourse()))
                 .collect(Collectors.toList());
-        
+
         return ResponseEntity.ok(courseDtos);
     }
 
@@ -81,36 +80,59 @@ public class CourseController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    /**
+     * 创建课程：
+     * CourseDto 需提供 teacherId（教师用户ID）
+     */
     @PostMapping
     public ResponseEntity<CourseDto> createCourse(@RequestBody CourseDto courseDto) {
         Course course = new Course();
         course.setName(courseDto.getName());
-        course.setTeacher(courseDto.getTeacher());
         course.setDescription(courseDto.getDescription());
-        
+
+        // 绑定教师（courses.teacher_id）
+        if (courseDto.getTeacherId() == null) {
+            throw new RuntimeException("teacherId 不能为空");
+        }
+        User teacher = userRepository.findById(courseDto.getTeacherId())
+                .orElseThrow(() -> new RuntimeException("教师不存在：ID=" + courseDto.getTeacherId()));
+        course.setTeacher(teacher);
+
+        // code 为空则自动生成
         if (courseDto.getCode() == null || courseDto.getCode().trim().isEmpty()) {
             String code = generateCourseCode(courseDto.getName());
             course.setCode(code);
         } else {
             course.setCode(courseDto.getCode());
         }
-        
+
         Course savedCourse = courseRepository.save(course);
         return ResponseEntity.ok(convertToCourseDto(savedCourse));
     }
 
+    /**
+     * 更新课程：
+     * 可更新 name/description/code；如传 teacherId 则更新教师
+     */
     @PutMapping("/{id}")
     public ResponseEntity<CourseDto> updateCourse(@PathVariable Long id, @RequestBody CourseDto courseDto) {
         return courseRepository.findById(id)
                 .map(existingCourse -> {
                     existingCourse.setName(courseDto.getName());
-                    existingCourse.setTeacher(courseDto.getTeacher());
                     existingCourse.setDescription(courseDto.getDescription());
-                    
+
+                    // 可选更新教师
+                    if (courseDto.getTeacherId() != null) {
+                        User teacher = userRepository.findById(courseDto.getTeacherId())
+                                .orElseThrow(() -> new RuntimeException("教师不存在：ID=" + courseDto.getTeacherId()));
+                        existingCourse.setTeacher(teacher);
+                    }
+
+                    // 可选更新 code
                     if (courseDto.getCode() != null && !courseDto.getCode().trim().isEmpty()) {
                         existingCourse.setCode(courseDto.getCode());
                     }
-                    
+
                     Course updatedCourse = courseRepository.save(existingCourse);
                     return ResponseEntity.ok(convertToCourseDto(updatedCourse));
                 })
@@ -215,7 +237,7 @@ public class CourseController {
         if (courseName == null || courseName.trim().isEmpty()) {
             return "COURSE" + System.currentTimeMillis();
         }
-        
+
         String[] words = courseName.split("\\s+");
         StringBuilder code = new StringBuilder();
         for (String word : words) {
@@ -223,11 +245,11 @@ public class CourseController {
                 code.append(Character.toUpperCase(word.charAt(0)));
             }
         }
-        
+
         if (code.length() < 3) {
             code.append("_").append(System.currentTimeMillis() % 10000);
         }
-        
+
         return code.toString();
     }
 
@@ -236,8 +258,12 @@ public class CourseController {
         dto.setId(course.getId());
         dto.setName(course.getName());
         dto.setCode(course.getCode());
-        dto.setTeacher(course.getTeacher());
         dto.setDescription(course.getDescription());
+
+        if (course.getTeacher() != null) {
+            dto.setTeacherId(course.getTeacher().getId());
+            dto.setTeacherUsername(course.getTeacher().getUsername());
+        }
         return dto;
     }
 

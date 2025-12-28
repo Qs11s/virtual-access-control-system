@@ -1,5 +1,6 @@
 package com.project.backend.controller;
 
+import com.project.backend.dto.AttendanceRequest;
 import com.project.backend.dto.AttendanceSummary;
 import com.project.backend.model.Attendance;
 import com.project.backend.model.SessionEntity;
@@ -50,35 +51,42 @@ public class AttendanceController {
     }
 
     @PostMapping("/checkin")
-    public ResponseEntity<Map<String, Object>> checkIn(@RequestParam Long sessionId) {
+    public ResponseEntity<Map<String, Object>> checkIn(@RequestBody AttendanceRequest request) {
+        // 1. 校验登录
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
         }
 
+        // 2. 查学生
         String username = auth.getName();
         User student = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
+        // 3. 查 session
+        Long sessionId = request.getSessionId();
         SessionEntity session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Session not found"));
 
+        // 4. 判断是否已选课
         Optional<StudentCourse> enrollment = studentCourseRepository.findByStudentAndCourse(student, session.getCourse());
         if (enrollment.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Student not enrolled in this course");
         }
 
+        // 5. 判断是否重复签到
         boolean alreadyCheckedIn = attendanceRepository.existsByStudentAndSession(student, session);
         if (alreadyCheckedIn) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Already checked in for this session");
         }
 
+        // 6. 计算状态（准时/迟到）
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime startTime = session.getStartTime();
         Duration diff = Duration.between(startTime, now);
-
         String status = (diff.isNegative() || diff.toMinutes() <= 10) ? "ON_TIME" : "LATE";
 
+        // 7. 保存考勤记录（实体）
         Attendance attendance = new Attendance();
         attendance.setStudent(student);
         attendance.setSession(session);
@@ -86,10 +94,20 @@ public class AttendanceController {
         attendance.setStatus(status);
         attendanceRepository.save(attendance);
 
+        // 8. 用 DTO 封装返回，避免直接返回实体导致 Hibernate 代理序列化问题
+        AttendanceSummary summary = new AttendanceSummary(
+                attendance.getId(),
+                attendance.getStudent().getId(),
+                attendance.getSession().getId(),
+                attendance.getCheckInTime(),
+                attendance.getCheckOutTime(),
+                attendance.getStatus()
+        );
+
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
         response.put("message", "Check-in recorded");
-        response.put("data", attendance);
+        response.put("data", summary);
         response.put("code", HttpStatus.OK.value());
         return ResponseEntity.ok(response);
     }

@@ -18,7 +18,12 @@ public class Course {
 
     private String code;
 
-    private String teacher;
+    /**
+     * 对应 courses.teacher_id -> users.id
+     */
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "teacher_id", nullable = false)
+    private User teacher;
 
     private String description;
 }

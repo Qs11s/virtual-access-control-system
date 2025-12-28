@@ -9,6 +9,7 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>3.2.2</version>
+        <relativePath/> <!-- 从仓库解析父 POM -->
     </parent>
 
     <groupId>com.project</groupId>
@@ -98,9 +99,11 @@
 
     <build>
         <plugins>
+            <!-- Spring Boot Maven 插件：支持 spring-boot:run / 打可执行jar -->
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <!-- 可以写 version，也可以省略走 parent 的 3.2.2 -->
                 <version>3.2.2</version>
                 <executions>
                     <execution>
