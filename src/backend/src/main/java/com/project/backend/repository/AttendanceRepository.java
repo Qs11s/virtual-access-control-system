@@ -14,12 +14,11 @@ public interface AttendanceRepository extends JpaRepository<Attendance, Long> {
 
     List<Attendance> findBySession(SessionEntity session);
 
+    List<Attendance> findBySession_Id(Long sessionId);
+
     Optional<Attendance> findByStudentAndSession(User student, SessionEntity session);
 
     boolean existsByStudentAndSession(User student, SessionEntity session);
 
-    // 新增：countByStatus方法（匹配Controller中调用的countByStatus(String)）
-    // 遵循JPA命名规范：countBy + 字段名（Status，字段名首字母大写）
-    // 返回值为long：符合JPA统计方法的默认返回类型（计数结果为长整型）
     long countByStatus(String status);
 }
