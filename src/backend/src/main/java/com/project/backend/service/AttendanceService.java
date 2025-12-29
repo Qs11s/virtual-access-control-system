@@ -11,6 +11,7 @@ import com.project.backend.model.User;
 import com.project.backend.repository.AttendanceRepository;
 import com.project.backend.repository.SessionRepository;
 import com.project.backend.repository.StudentCourseRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -23,6 +24,9 @@ public class AttendanceService {
     private final SessionRepository sessionRepository;
     private final StudentCourseRepository studentCourseRepository;
     private final AttendanceRepository attendanceRepository;
+
+    @Value("${attendance.early-leave-minutes:5}")
+    private int earlyLeaveMinutes;
 
     public AttendanceService(SessionRepository sessionRepository,
                              StudentCourseRepository studentCourseRepository,
@@ -63,7 +67,7 @@ public class AttendanceService {
         LocalDateTime start = session.getStartTime();
         Duration diff = Duration.between(start, now);
         if (diff.toMinutes() <= 10) {
-            attendance.setStatus("PRESENT");
+            attendance.setStatus("ON_TIME");
         } else {
             attendance.setStatus("LATE");
         }
@@ -87,7 +91,8 @@ public class AttendanceService {
 
         LocalDateTime end = session.getEndTime();
         Duration diff = Duration.between(now, end);
-        if (diff.toMinutes() > 5) {
+        long minutesBeforeEnd = diff.toMinutes();
+        if (minutesBeforeEnd > earlyLeaveMinutes) {
             attendance.setStatus("EARLY_LEAVE");
         }
 

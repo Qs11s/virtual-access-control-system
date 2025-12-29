@@ -24,31 +24,22 @@ public class TempCodeController {
     @Autowired
     private TempCodeService tempCodeService;
 
-    /**
-     * 管理员创建临时码
-     */
     @PostMapping
     public ResponseEntity<TempCodeCreateResponse> generateTempCode(
-            @Valid @RequestBody TempCodeCreateRequest request // 开启参数校验
+            @Valid @RequestBody TempCodeCreateRequest request
     ) {
         TempCodeCreateResponse response = tempCodeService.createTempCode(request);
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * 验证临时码（公开访问）
-     */
     @PostMapping("/verify")
     public ResponseEntity<TempCodeVerifyResponse> verifyTempCode(
-            @Valid @RequestBody TempCodeVerifyRequest request // 开启参数校验
+            @Valid @RequestBody TempCodeVerifyRequest request
     ) {
         TempCodeVerifyResponse response = tempCodeService.verifyTempCode(request);
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * 局部异常处理（控制器内专用）
-     */
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, String>> handleRuntimeException(RuntimeException e) {
         Map<String, String> errorResponse = new HashMap<>();

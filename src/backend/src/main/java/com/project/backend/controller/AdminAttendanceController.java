@@ -1,10 +1,14 @@
 package com.project.backend.controller;
 
 import com.project.backend.model.Attendance;
+import com.project.backend.model.SessionEntity;
 import com.project.backend.repository.AttendanceRepository;
+import com.project.backend.repository.SessionRepository;
+import com.project.backend.repository.StudentCourseRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,9 +18,15 @@ import java.util.Map;
 public class AdminAttendanceController {
 
     private final AttendanceRepository attendanceRepository;
+    private final SessionRepository sessionRepository;
+    private final StudentCourseRepository studentCourseRepository;
 
-    public AdminAttendanceController(AttendanceRepository attendanceRepository) {
+    public AdminAttendanceController(AttendanceRepository attendanceRepository,
+                                     SessionRepository sessionRepository,
+                                     StudentCourseRepository studentCourseRepository) {
         this.attendanceRepository = attendanceRepository;
+        this.sessionRepository = sessionRepository;
+        this.studentCourseRepository = studentCourseRepository;
     }
 
     @GetMapping("/session/{sessionId}")
@@ -43,7 +53,7 @@ public class AdminAttendanceController {
         List<Attendance> list = attendanceRepository.findBySession_Id(sessionId);
 
         long onTime = list.stream()
-                .filter(a -> "ON_TIME".equals(a.getStatus()))
+                .filter(a -> "ON_TIME".equals(a.getStatus()) || "PRESENT".equals(a.getStatus()))
                 .count();
 
         long late = list.stream()
@@ -54,14 +64,28 @@ public class AdminAttendanceController {
                 .filter(a -> "EARLY_LEAVE".equals(a.getStatus()))
                 .count();
 
-        long total = list.size();
+        long totalCheckedIn = list.size();
+
+        SessionEntity session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new RuntimeException("Session not found"));
+
+        Long courseId = session.getCourse().getId();
+        long totalEnrolled = studentCourseRepository.countByCourse_Id(courseId);
+
+        long absent = 0;
+        LocalDateTime now = LocalDateTime.now();
+        if (now.isAfter(session.getEndTime()) && totalEnrolled > totalCheckedIn) {
+            absent = totalEnrolled - totalCheckedIn;
+        }
 
         Map<String, Object> result = new HashMap<>();
         result.put("sessionId", sessionId);
-        result.put("totalCheckedIn", total);
+        result.put("totalEnrolled", totalEnrolled);
+        result.put("totalCheckedIn", totalCheckedIn);
         result.put("onTime", onTime);
         result.put("late", late);
         result.put("earlyLeave", earlyLeave);
+        result.put("absent", absent);
 
         return ResponseEntity.ok(result);
     }
