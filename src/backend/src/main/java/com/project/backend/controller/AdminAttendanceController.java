@@ -50,6 +50,10 @@ public class AdminAttendanceController {
                 .filter(a -> "LATE".equals(a.getStatus()))
                 .count();
 
+        long earlyLeave = list.stream()
+                .filter(a -> "EARLY_LEAVE".equals(a.getStatus()))
+                .count();
+
         long total = list.size();
 
         Map<String, Object> result = new HashMap<>();
@@ -57,6 +61,7 @@ public class AdminAttendanceController {
         result.put("totalCheckedIn", total);
         result.put("onTime", onTime);
         result.put("late", late);
+        result.put("earlyLeave", earlyLeave);
 
         return ResponseEntity.ok(result);
     }

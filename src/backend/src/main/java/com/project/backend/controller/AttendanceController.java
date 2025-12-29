@@ -168,12 +168,14 @@ public class AttendanceController {
 
         long onTime = records.stream().filter(a -> "ON_TIME".equals(a.getStatus())).count();
         long late = records.stream().filter(a -> "LATE".equals(a.getStatus())).count();
+        long earlyLeave = records.stream().filter(a -> "EARLY_LEAVE".equals(a.getStatus())).count();
 
         Map<String, Object> resp = new HashMap<>();
         resp.put("sessionId", sessionId);
         resp.put("checkedIn", records.size());
         resp.put("onTime", onTime);
         resp.put("late", late);
+        resp.put("earlyLeave", earlyLeave);
         return resp;
     }
 }

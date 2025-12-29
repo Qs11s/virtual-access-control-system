@@ -68,7 +68,14 @@ public class AttendanceCheckoutController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Already checked out");
         }
 
-        attendance.setCheckOutTime(LocalDateTime.now());
+        LocalDateTime now = LocalDateTime.now();
+        attendance.setCheckOutTime(now);
+
+        LocalDateTime endTime = session.getEndTime();
+        if (endTime != null && now.isBefore(endTime.minusMinutes(5))) {
+            attendance.setStatus("EARLY_LEAVE");
+        }
+
         attendanceRepository.save(attendance);
 
         Map<String, Object> body = new HashMap<>();
