@@ -23,7 +23,7 @@ spring:
         web-allow-others: true
   sql:
     init:
-      mode: always
+      mode: never
       continue-on-error: false
       schema-locations: classpath:schema.sql
       data-locations: classpath:data.sql

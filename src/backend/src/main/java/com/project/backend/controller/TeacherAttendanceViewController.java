@@ -1,5 +1,6 @@
 package com.project.backend.controller;
 
+import com.project.backend.dto.ApproveEarlyLeaveBatchRequest;
 import com.project.backend.model.Attendance;
 import com.project.backend.model.SessionEntity;
 import com.project.backend.repository.AttendanceRepository;
@@ -62,7 +63,6 @@ public class TeacherAttendanceViewController {
     public ResponseEntity<List<Map<String, Object>>> sessionAttendance(@PathVariable Long sessionId,
                                                                        @AuthenticationPrincipal UserDetails userDetails) {
         SessionEntity session = loadAndCheckSession(sessionId, userDetails);
-        LocalDateTime now = LocalDateTime.now();
 
         List<Attendance> list = attendanceRepository.findBySession_Id(session.getId());
 
@@ -74,17 +74,9 @@ public class TeacherAttendanceViewController {
             m.put("sessionId", a.getSession().getId());
             m.put("checkInTime", a.getCheckInTime());
             m.put("checkOutTime", a.getCheckOutTime());
-
-            String status = a.getStatus();
-            if (a.getCheckInTime() != null
-                    && a.getCheckOutTime() == null
-                    && now.isAfter(a.getSession().getEndTime())) {
-                status = "NONE";
-            }
-            m.put("status", status);
+            m.put("status", a.getStatus());
             m.put("earlyLeaveApproved", a.getEarlyLeaveApproved());
             m.put("earlyLeaveReason", a.getEarlyLeaveReason());
-
             return m;
         }).toList();
 
@@ -95,7 +87,6 @@ public class TeacherAttendanceViewController {
     public ResponseEntity<Map<String, Object>> sessionSummary(@PathVariable Long sessionId,
                                                               @AuthenticationPrincipal UserDetails userDetails) {
         SessionEntity session = loadAndCheckSession(sessionId, userDetails);
-        LocalDateTime now = LocalDateTime.now();
 
         List<Attendance> list = attendanceRepository.findBySession_Id(session.getId());
 
@@ -107,20 +98,16 @@ public class TeacherAttendanceViewController {
                 .filter(a -> "LATE".equals(a.getStatus()))
                 .count();
 
-        long earlyLeaveApproved = list.stream()
-                .filter(a -> "EARLY_LEAVE".equals(a.getStatus()))
-                .filter(a -> Boolean.TRUE.equals(a.getEarlyLeaveApproved()))
+        long earlyLeave = list.stream()
+                .filter(a -> "EARLY_LEAVE".equals(a.getStatus()) && (a.getEarlyLeaveApproved() == null || !a.getEarlyLeaveApproved()))
                 .count();
 
-        long earlyLeaveUnapproved = list.stream()
-                .filter(a -> "EARLY_LEAVE".equals(a.getStatus()))
-                .filter(a -> !Boolean.TRUE.equals(a.getEarlyLeaveApproved()))
+        long earlyLeaveApproved = list.stream()
+                .filter(a -> "EARLY_LEAVE".equals(a.getStatus()) && Boolean.TRUE.equals(a.getEarlyLeaveApproved()))
                 .count();
 
         long none = list.stream()
-                .filter(a -> a.getCheckInTime() != null)
-                .filter(a -> a.getCheckOutTime() == null)
-                .filter(a -> now.isAfter(a.getSession().getEndTime()))
+                .filter(a -> "NONE".equals(a.getStatus()))
                 .count();
 
         long total = list.size();
@@ -130,7 +117,7 @@ public class TeacherAttendanceViewController {
         result.put("totalCheckedIn", total);
         result.put("onTime", onTime);
         result.put("late", late);
-        result.put("earlyLeave", earlyLeaveUnapproved);
+        result.put("earlyLeave", earlyLeave);
         result.put("earlyLeaveApproved", earlyLeaveApproved);
         result.put("none", none);
 
@@ -148,29 +135,29 @@ public class TeacherAttendanceViewController {
 
         Map<String, Object> result = new HashMap<>();
         result.put("sessionId", sessionId);
-        result.put("newEndTime", session.getEndTime());
+        result.put("newEndTime", now);
+
         return ResponseEntity.ok(result);
     }
 
     @PostMapping("/{attendanceId}/approve-early-leave")
     public ResponseEntity<Map<String, Object>> approveEarlyLeave(@PathVariable Long attendanceId,
-                                                                 @AuthenticationPrincipal UserDetails userDetails,
-                                                                 @RequestBody ApproveRequest request) {
-        if (userDetails == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
-        }
-
+                                                                 @RequestBody Map<String, String> body,
+                                                                 @AuthenticationPrincipal UserDetails userDetails) {
         Attendance attendance = attendanceRepository.findById(attendanceId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Attendance not found"));
 
-        SessionEntity session = loadAndCheckSession(attendance.getSession().getId(), userDetails);
+        Long sessionId = attendance.getSession().getId();
+        SessionEntity session = loadAndCheckSession(sessionId, userDetails);
 
         if (!"EARLY_LEAVE".equals(attendance.getStatus())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only EARLY_LEAVE records can be approved");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Attendance is not EARLY_LEAVE");
         }
 
+        String reason = body.get("reason");
+
         attendance.setEarlyLeaveApproved(true);
-        attendance.setEarlyLeaveReason(request != null ? request.getReason() : null);
+        attendance.setEarlyLeaveReason(reason);
         attendanceRepository.save(attendance);
 
         Map<String, Object> result = new HashMap<>();
@@ -184,68 +171,38 @@ public class TeacherAttendanceViewController {
 
     @PostMapping("/session/{sessionId}/approve-early-leave")
     public ResponseEntity<Map<String, Object>> approveEarlyLeaveBatch(@PathVariable Long sessionId,
-                                                                      @AuthenticationPrincipal UserDetails userDetails,
-                                                                      @RequestBody ApproveBatchRequest request) {
+                                                                      @RequestBody ApproveEarlyLeaveBatchRequest request,
+                                                                      @AuthenticationPrincipal UserDetails userDetails) {
         SessionEntity session = loadAndCheckSession(sessionId, userDetails);
 
-        if (request == null || request.getAttendanceIds() == null || request.getAttendanceIds().isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "attendanceIds is required");
+        if (request.getAttendanceIds() == null || request.getAttendanceIds().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "attendanceIds is empty");
         }
 
         List<Attendance> list = attendanceRepository.findAllById(request.getAttendanceIds());
 
-        int updatedCount = 0;
+        int updated = 0;
         for (Attendance a : list) {
-            if (!a.getSession().getId().equals(session.getId())) {
+            if (a.getSession() == null || !session.getId().equals(a.getSession().getId())) {
                 continue;
             }
             if (!"EARLY_LEAVE".equals(a.getStatus())) {
                 continue;
             }
+            if (Boolean.TRUE.equals(a.getEarlyLeaveApproved())) {
+                continue;
+            }
             a.setEarlyLeaveApproved(true);
             a.setEarlyLeaveReason(request.getReason());
-            updatedCount++;
+            updated++;
         }
 
         attendanceRepository.saveAll(list);
 
         Map<String, Object> result = new HashMap<>();
         result.put("sessionId", sessionId);
-        result.put("updatedCount", updatedCount);
+        result.put("updatedCount", updated);
 
         return ResponseEntity.ok(result);
-    }
-
-    public static class ApproveRequest {
-        private String reason;
-
-        public String getReason() {
-            return reason;
-        }
-
-        public void setReason(String reason) {
-            this.reason = reason;
-        }
-    }
-
-    public static class ApproveBatchRequest {
-        private List<Long> attendanceIds;
-        private String reason;
-
-        public List<Long> getAttendanceIds() {
-            return attendanceIds;
-        }
-
-        public void setAttendanceIds(List<Long> attendanceIds) {
-            this.attendanceIds = attendanceIds;
-        }
-
-        public String getReason() {
-            return reason;
-        }
-
-        public void setReason(String reason) {
-            this.reason = reason;
-        }
     }
 }
