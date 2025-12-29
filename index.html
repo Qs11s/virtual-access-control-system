@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <title>Virtual Access Control System - Frontend Demo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- 简单样式，你已有 style.css 的话可继续沿用 -->
   <link rel="stylesheet" href="src/frontend/style.css" />
 </head>
 <body>
@@ -13,10 +14,11 @@
       <p class="subtitle">Frontend Demo：Login / Attendance / Teacher / Admin / Access</p>
     </header>
 
+    <!-- 登录 / 注册视图 -->
     <main id="login-view" class="view">
       <section class="card">
         <h2>登录</h2>
-        <form id="login-form" method="post" autocomplete="off">
+        <form id="login-form">
           <div class="form-group">
             <label for="login-username">用户名</label>
             <input id="login-username" name="username" type="text" required />
@@ -31,67 +33,25 @@
       </section>
 
       <section class="card">
-        <h2>注册</h2>
-        <div class="button-row">
-          <button type="button" id="tab-student-register" class="secondary">学生注册</button>
-          <button type="button" id="tab-teacher-register" class="secondary">教师注册</button>
-          <button type="button" id="tab-admin-register" class="secondary">管理员注册</button>
-        </div>
-
-        <div id="student-register-section">
-          <h3>学生注册</h3>
-          <p class="subtitle">普通用户默认注册为学生，用户名可自由设置（不能以 admin/teacher 开头）。</p>
-          <form id="register-form" method="post" autocomplete="off">
-            <div class="form-group">
-              <label for="register-username">用户名</label>
-              <input id="register-username" name="username" type="text" required />
-            </div>
-            <div class="form-group">
-              <label for="register-password">密码</label>
-              <input id="register-password" name="password" type="password" required />
-            </div>
-            <button type="submit">注册学生账号</button>
-          </form>
-          <div id="register-message" class="message"></div>
-        </div>
-
-        <div id="teacher-register-section" style="display:none;">
-          <h3>教师注册</h3>
-          <p class="subtitle">教师用户名必须以 teacher 开头，例如 teacher_zhang。</p>
-          <form id="teacher-register-form" method="post" autocomplete="off">
-            <div class="form-group">
-              <label for="teacher-register-username">教师用户名</label>
-              <input id="teacher-register-username" type="text" required />
-            </div>
-            <div class="form-group">
-              <label for="teacher-register-password">密码</label>
-              <input id="teacher-register-password" type="password" required />
-            </div>
-            <button type="submit">注册教师账号</button>
-          </form>
-          <div id="teacher-register-message" class="message"></div>
-        </div>
-
-        <div id="admin-register-section" style="display:none;">
-          <h3>管理员注册</h3>
-          <p class="subtitle">管理员用户名必须以 admin 开头，例如 admin_office。</p>
-          <form id="admin-register-form" method="post" autocomplete="off">
-            <div class="form-group">
-              <label for="admin-register-username">管理员用户名</label>
-              <input id="admin-register-username" type="text" required />
-            </div>
-            <div class="form-group">
-              <label for="admin-register-password">密码</label>
-              <input id="admin-register-password" type="password" required />
-            </div>
-            <button type="submit">注册管理员账号</button>
-          </form>
-          <div id="admin-register-message" class="message"></div>
-        </div>
+        <h2>注册（默认学生角色，后端如未实现可忽略）</h2>
+        <form id="register-form">
+          <div class="form-group">
+            <label for="register-username">用户名</label>
+            <input id="register-username" name="username" type="text" required />
+          </div>
+          <div class="form-group">
+            <label for="register-password">密码</label>
+            <input id="register-password" name="password" type="password" required />
+          </div>
+          <button type="submit">注册</button>
+        </form>
+        <div id="register-message" class="message"></div>
       </section>
     </main>
 
+    <!-- 登录后的主视图 -->
     <main id="dashboard-view" class="view" style="display:none;">
+      <!-- 顶部用户信息 -->
       <section class="card">
         <div class="flex-between">
           <div>
@@ -102,22 +62,24 @@
         </div>
       </section>
 
-      <section id="student-checkin-section" class="card" data-role-section="STUDENT">
+      <!-- 学生：签到 / 签退 -->
+      <section class="card" data-role-section="STUDENT">
         <h3>学生：课堂签到 / 签退</h3>
-        <form id="checkin-form">
+        <form id="student-attendance-form">
           <div class="form-group">
-            <label for="session-id">Session ID</label>
-            <input id="session-id" type="number" required />
+            <label for="student-session-id">Session ID</label>
+            <input id="student-session-id" type="number" required />
           </div>
           <div class="button-row">
-            <button type="submit" id="student-checkin-btn">签到</button>
-            <button type="button" id="checkout-btn" class="secondary">签退</button>
+            <button type="button" id="student-checkin-btn">签到</button>
+            <button type="button" id="student-checkout-btn" class="secondary">签退</button>
           </div>
         </form>
-        <div id="checkin-message" class="message"></div>
+        <div id="student-attendance-message" class="message"></div>
       </section>
 
-      <section id="teacher-attendance-section" class="card" data-role-section="TEACHER">
+      <!-- 教师：查看/统计/审批早退 -->
+      <section class="card" data-role-section="TEACHER">
         <h3>教师：查看课堂考勤</h3>
         <form id="teacher-session-form">
           <div class="form-group">
@@ -126,24 +88,49 @@
           </div>
           <button type="submit">加载本节课考勤数据</button>
         </form>
-        <div id="teacher-summary" class="message"></div>
+        <div id="teacher-session-message" class="message"></div>
+
+        <div class="summary-row">
+          <p>统计：
+            <span>已签到：<span id="teacher-total-checked-in">0</span></span>，
+            <span>准时：<span id="teacher-on-time">0</span></span>，
+            <span>迟到：<span id="teacher-late">0</span></span>，
+            <span>早退：<span id="teacher-early-leave">0</span></span>，
+            <span>早退已批准：<span id="teacher-early-leave-approved">0</span></span>，
+            <span>未签退：<span id="teacher-none">0</span></span>
+          </p>
+        </div>
+
+        <div class="form-group">
+          <label for="teacher-approve-reason">早退批准理由（单个/批量共享）</label>
+          <input id="teacher-approve-reason" type="text" placeholder="例如：课堂内容提前完成" />
+        </div>
+
+        <div class="flex-between">
+          <h4>本节课学生列表</h4>
+          <button type="button" id="teacher-batch-approve-btn" class="secondary">
+            批量批准选中早退
+          </button>
+        </div>
 
         <table class="table">
           <thead>
             <tr>
-              <th>学生 ID</th>
+              <th><input type="checkbox" id="teacher-select-all" /></th>
               <th>学生用户名</th>
+              <th>状态</th>
               <th>签到时间</th>
               <th>签退时间</th>
-              <th>状态</th>
               <th>早退已批准</th>
               <th>早退原因</th>
+              <th>操作</th>
             </tr>
           </thead>
           <tbody id="teacher-attendance-tbody"></tbody>
         </table>
       </section>
 
+      <!-- 教师：提前结束课程 -->
       <section class="card" data-role-section="TEACHER">
         <h3>教师：本节课提前下课</h3>
         <p>将本节课的结束时间更新为当前时间，之后学生签退视为正常签退。</p>
@@ -157,7 +144,8 @@
         <div id="teacher-early-end-message" class="message"></div>
       </section>
 
-      <section id="admin-attendance-section" class="card" data-role-section="ADMIN">
+      <!-- 管理员：考勤报表 -->
+      <section class="card" data-role-section="ADMIN">
         <h3>管理员：查看课堂考勤报表</h3>
         <form id="admin-session-form">
           <div class="form-group">
@@ -166,16 +154,29 @@
           </div>
           <button type="submit">查询报表</button>
         </form>
-        <div id="admin-summary" class="message"></div>
+        <div id="admin-session-message" class="message"></div>
 
+        <div class="summary-row">
+          <p>统计：
+            <span>选课人数：<span id="admin-total-enrolled">0</span></span>，
+            <span>已签到：<span id="admin-total-checked-in">0</span></span>，
+            <span>准时：<span id="admin-on-time">0</span></span>，
+            <span>迟到：<span id="admin-late">0</span></span>，
+            <span>早退：<span id="admin-early-leave">0</span></span>，
+            <span>早退已批准：<span id="admin-early-leave-approved">0</span></span>，
+            <span>未签退：<span id="admin-none">0</span></span>，
+            <span>缺勤：<span id="admin-absent">0</span></span>
+          </p>
+        </div>
+
+        <h4>本节课考勤列表</h4>
         <table class="table">
           <thead>
             <tr>
-              <th>学生 ID</th>
               <th>学生用户名</th>
+              <th>状态</th>
               <th>签到时间</th>
               <th>签退时间</th>
-              <th>状态</th>
               <th>早退已批准</th>
               <th>早退原因</th>
             </tr>
@@ -184,28 +185,29 @@
         </table>
       </section>
 
-      <section id="admin-tempcode-section" class="card" data-role-section="ADMIN">
+      <!-- 管理员：创建临时门禁码 -->
+      <section class="card" data-role-section="ADMIN">
         <h3>管理员：创建临时门禁码</h3>
         <form id="admin-tempcode-form">
           <div class="form-group">
-            <label for="tempcode-location-id">Location ID</label>
-            <input id="tempcode-location-id" type="number" required />
+            <label for="admin-location-id">Location ID</label>
+            <input id="admin-location-id" type="number" required />
           </div>
           <div class="form-group">
-            <label for="tempcode-expires-minutes">有效分钟数</label>
-            <input id="tempcode-expires-minutes" type="number" value="10" min="1" required />
+            <label for="admin-tempcode-minutes">有效分钟数</label>
+            <input id="admin-tempcode-minutes" type="number" value="10" min="1" required />
           </div>
           <div class="form-group">
-            <label for="tempcode-max-uses">最大使用次数</label>
-            <input id="tempcode-max-uses" type="number" value="1" min="1" required />
+            <label for="admin-tempcode-max-uses">最大使用次数</label>
+            <input id="admin-tempcode-max-uses" type="number" value="1" min="1" required />
           </div>
           <button type="submit">生成临时码</button>
         </form>
         <div id="admin-tempcode-message" class="message"></div>
-        <div id="admin-tempcode-result" class="message"></div>
       </section>
 
-      <section id="tempcode-verify-section" class="card">
+      <!-- 门禁终端：验证临时码（匿名访问） -->
+      <section class="card">
         <h3>门禁终端：验证临时码</h3>
         <form id="tempcode-verify-form">
           <div class="form-group">

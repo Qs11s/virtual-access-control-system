@@ -35,16 +35,17 @@ public class AuthController {
         if (existing.isPresent()) {
             return ResponseEntity.badRequest().body("Username already exists");
         }
+        String role = resolveRoleFromUsername(request.getUsername());
         User user = new User();
         user.setUsername(request.getUsername());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRole("STUDENT");
+        user.setRole(role);
         userRepository.save(user);
         return ResponseEntity.ok("User registered successfully");
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Map<String, String>> login(@RequestBody LoginRequest request) { // 修改返回类型为Map
+    public ResponseEntity<Map<String, String>> login(@RequestBody LoginRequest request) {
         Optional<User> optionalUser = userRepository.findFirstByUsernameOrderByIdDesc(request.getUsername());
         if (optionalUser.isEmpty()) {
             Map<String, String> errorResponse = new HashMap<>();
@@ -58,10 +59,22 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
         }
         String token = jwtUtil.generateToken(user.getUsername());
-        
-        // 返回JSON格式，包含token字段（匹配测试类预期）
         Map<String, String> successResponse = new HashMap<>();
         successResponse.put("token", token);
         return ResponseEntity.ok(successResponse);
+    }
+
+    private String resolveRoleFromUsername(String username) {
+        if (username == null) {
+            return "ROLE_STUDENT";
+        }
+        String u = username.toLowerCase();
+        if (u.startsWith("admin")) {
+            return "ROLE_ADMIN";
+        }
+        if (u.startsWith("teacher")) {
+            return "ROLE_TEACHER";
+        }
+        return "ROLE_STUDENT";
     }
 }

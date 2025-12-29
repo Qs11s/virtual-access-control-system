@@ -23,7 +23,9 @@ public class AuthService {
         if (userRepo.findFirstByUsernameOrderByIdDesc(username).isPresent()) {
             return "Username already exists!";
         }
+        String role = resolveRoleFromUsername(username);
         User user = new User(username, passwordEncoder.encode(password));
+        user.setRole(role);
         userRepo.save(user);
         return "Register success!";
     }
@@ -34,5 +36,19 @@ public class AuthService {
                         ? jwtUtil.generateToken(username)
                         : "Wrong password!")
                 .orElse("User not found!");
+    }
+
+    private String resolveRoleFromUsername(String username) {
+        if (username == null) {
+            return "ROLE_STUDENT";
+        }
+        String u = username.toLowerCase();
+        if (u.startsWith("admin")) {
+            return "ROLE_ADMIN";
+        }
+        if (u.startsWith("teacher")) {
+            return "ROLE_TEACHER";
+        }
+        return "ROLE_STUDENT";
     }
 }
