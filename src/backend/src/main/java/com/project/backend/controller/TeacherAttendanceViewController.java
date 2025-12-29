@@ -12,6 +12,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,6 +62,7 @@ public class TeacherAttendanceViewController {
     public ResponseEntity<List<Map<String, Object>>> sessionAttendance(@PathVariable Long sessionId,
                                                                        @AuthenticationPrincipal UserDetails userDetails) {
         SessionEntity session = loadAndCheckSession(sessionId, userDetails);
+        LocalDateTime now = LocalDateTime.now();
 
         List<Attendance> list = attendanceRepository.findBySession_Id(session.getId());
 
@@ -72,7 +74,17 @@ public class TeacherAttendanceViewController {
             m.put("sessionId", a.getSession().getId());
             m.put("checkInTime", a.getCheckInTime());
             m.put("checkOutTime", a.getCheckOutTime());
-            m.put("status", a.getStatus());
+
+            String status = a.getStatus();
+            if (a.getCheckInTime() != null
+                    && a.getCheckOutTime() == null
+                    && now.isAfter(a.getSession().getEndTime())) {
+                status = "NONE";
+            }
+            m.put("status", status);
+            m.put("earlyLeaveApproved", a.getEarlyLeaveApproved());
+            m.put("earlyLeaveReason", a.getEarlyLeaveReason());
+
             return m;
         }).toList();
 
@@ -83,6 +95,7 @@ public class TeacherAttendanceViewController {
     public ResponseEntity<Map<String, Object>> sessionSummary(@PathVariable Long sessionId,
                                                               @AuthenticationPrincipal UserDetails userDetails) {
         SessionEntity session = loadAndCheckSession(sessionId, userDetails);
+        LocalDateTime now = LocalDateTime.now();
 
         List<Attendance> list = attendanceRepository.findBySession_Id(session.getId());
 
@@ -94,8 +107,20 @@ public class TeacherAttendanceViewController {
                 .filter(a -> "LATE".equals(a.getStatus()))
                 .count();
 
-        long earlyLeave = list.stream()
+        long earlyLeaveApproved = list.stream()
                 .filter(a -> "EARLY_LEAVE".equals(a.getStatus()))
+                .filter(a -> Boolean.TRUE.equals(a.getEarlyLeaveApproved()))
+                .count();
+
+        long earlyLeaveUnapproved = list.stream()
+                .filter(a -> "EARLY_LEAVE".equals(a.getStatus()))
+                .filter(a -> !Boolean.TRUE.equals(a.getEarlyLeaveApproved()))
+                .count();
+
+        long none = list.stream()
+                .filter(a -> a.getCheckInTime() != null)
+                .filter(a -> a.getCheckOutTime() == null)
+                .filter(a -> now.isAfter(a.getSession().getEndTime()))
                 .count();
 
         long total = list.size();
@@ -105,8 +130,122 @@ public class TeacherAttendanceViewController {
         result.put("totalCheckedIn", total);
         result.put("onTime", onTime);
         result.put("late", late);
-        result.put("earlyLeave", earlyLeave);
+        result.put("earlyLeave", earlyLeaveUnapproved);
+        result.put("earlyLeaveApproved", earlyLeaveApproved);
+        result.put("none", none);
 
         return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/session/{sessionId}/early-end")
+    public ResponseEntity<Map<String, Object>> earlyEnd(@PathVariable Long sessionId,
+                                                        @AuthenticationPrincipal UserDetails userDetails) {
+        SessionEntity session = loadAndCheckSession(sessionId, userDetails);
+
+        LocalDateTime now = LocalDateTime.now();
+        session.setEndTime(now);
+        sessionRepository.save(session);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("sessionId", sessionId);
+        result.put("newEndTime", session.getEndTime());
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/{attendanceId}/approve-early-leave")
+    public ResponseEntity<Map<String, Object>> approveEarlyLeave(@PathVariable Long attendanceId,
+                                                                 @AuthenticationPrincipal UserDetails userDetails,
+                                                                 @RequestBody ApproveRequest request) {
+        if (userDetails == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
+        }
+
+        Attendance attendance = attendanceRepository.findById(attendanceId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Attendance not found"));
+
+        SessionEntity session = loadAndCheckSession(attendance.getSession().getId(), userDetails);
+
+        if (!"EARLY_LEAVE".equals(attendance.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only EARLY_LEAVE records can be approved");
+        }
+
+        attendance.setEarlyLeaveApproved(true);
+        attendance.setEarlyLeaveReason(request != null ? request.getReason() : null);
+        attendanceRepository.save(attendance);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("sessionId", session.getId());
+        result.put("attendanceId", attendance.getId());
+        result.put("earlyLeaveApproved", attendance.getEarlyLeaveApproved());
+        result.put("earlyLeaveReason", attendance.getEarlyLeaveReason());
+
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/session/{sessionId}/approve-early-leave")
+    public ResponseEntity<Map<String, Object>> approveEarlyLeaveBatch(@PathVariable Long sessionId,
+                                                                      @AuthenticationPrincipal UserDetails userDetails,
+                                                                      @RequestBody ApproveBatchRequest request) {
+        SessionEntity session = loadAndCheckSession(sessionId, userDetails);
+
+        if (request == null || request.getAttendanceIds() == null || request.getAttendanceIds().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "attendanceIds is required");
+        }
+
+        List<Attendance> list = attendanceRepository.findAllById(request.getAttendanceIds());
+
+        int updatedCount = 0;
+        for (Attendance a : list) {
+            if (!a.getSession().getId().equals(session.getId())) {
+                continue;
+            }
+            if (!"EARLY_LEAVE".equals(a.getStatus())) {
+                continue;
+            }
+            a.setEarlyLeaveApproved(true);
+            a.setEarlyLeaveReason(request.getReason());
+            updatedCount++;
+        }
+
+        attendanceRepository.saveAll(list);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("sessionId", sessionId);
+        result.put("updatedCount", updatedCount);
+
+        return ResponseEntity.ok(result);
+    }
+
+    public static class ApproveRequest {
+        private String reason;
+
+        public String getReason() {
+            return reason;
+        }
+
+        public void setReason(String reason) {
+            this.reason = reason;
+        }
+    }
+
+    public static class ApproveBatchRequest {
+        private List<Long> attendanceIds;
+        private String reason;
+
+        public List<Long> getAttendanceIds() {
+            return attendanceIds;
+        }
+
+        public void setAttendanceIds(List<Long> attendanceIds) {
+            this.attendanceIds = attendanceIds;
+        }
+
+        public String getReason() {
+            return reason;
+        }
+
+        public void setReason(String reason) {
+            this.reason = reason;
+        }
     }
 }

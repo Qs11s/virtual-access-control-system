@@ -63,6 +63,9 @@ public class AttendanceService {
         attendance.setStudent(student);
         attendance.setSession(session);
         attendance.setCheckInTime(now);
+        attendance.setCheckOutTime(null);
+        attendance.setEarlyLeaveApproved(null);
+        attendance.setEarlyLeaveReason(null);
 
         LocalDateTime start = session.getStartTime();
         Duration diff = Duration.between(start, now);
@@ -94,6 +97,7 @@ public class AttendanceService {
         long minutesBeforeEnd = diff.toMinutes();
         if (minutesBeforeEnd > earlyLeaveMinutes) {
             attendance.setStatus("EARLY_LEAVE");
+            attendance.setEarlyLeaveApproved(false);
         }
 
         return attendanceRepository.save(attendance);

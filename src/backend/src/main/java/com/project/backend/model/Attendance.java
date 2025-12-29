@@ -29,4 +29,8 @@ public class Attendance {
     private LocalDateTime checkOutTime;
 
     private String status;
+
+    private Boolean earlyLeaveApproved;
+
+    private String earlyLeaveReason;
 }

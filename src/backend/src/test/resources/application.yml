@@ -1,66 +1,55 @@
-# 测试环境配置 - 启用所有功能
 spring:
-  # 数据源配置 - H2内存数据库
   datasource:
     url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=MYSQL
     driver-class-name: org.h2.Driver
     username: sa
     password:
-  
-  # JPA/Hibernate配置
   jpa:
     database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
-      ddl-auto: create-drop  # 测试中自动创建表结构，结束后清理
-    show-sql: true  # 启用SQL日志，便于调试
+      ddl-auto: none
+    show-sql: true
     properties:
       hibernate:
-        format_sql: true  # 格式化SQL输出，增强可读性
-  
-  # 启用SQL初始化脚本（测试数据初始化）
+        format_sql: true
   sql:
     init:
-      mode: always  # 总是执行初始化脚本
-      schema-locations: classpath:sql/schema.sql  # 指定schema脚本路径
-      data-locations: classpath:sql/data.sql  # 指定数据初始化脚本
-  
-  # 启用H2控制台（测试中可直接访问数据库）
+      mode: always
+      continue-on-error: false
+      schema-locations: classpath:schema.sql
+      data-locations: classpath:data.sql
+      encoding: UTF-8
   h2:
     console:
       enabled: true
-      path: /h2-console  # 控制台访问路径
+      path: /h2-console
       settings:
-        web-allow-others: true  # 允许外部访问（仅测试环境）
-  
-  # 安全配置
+        web-allow-others: true
   security:
     enabled: true
 
-# 日志配置（详细输出便于调试）
 logging:
   level:
     root: INFO
-    com.project.backend: DEBUG  # 项目核心包开启DEBUG日志
-    org.springframework.security: DEBUG  # 安全相关日志详细输出
+    com.project.backend: DEBUG
+    org.springframework.security: DEBUG
     org.springframework.web: INFO
-    org.hibernate.SQL: DEBUG  # Hibernate SQL日志
-    org.hibernate.type.descriptor.sql.BasicBinder: TRACE  # 显示SQL参数绑定
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
     org.springframework.test: INFO
 
-# 测试环境安全功能配置
 test:
   security:
-    enabled: true  # 启用安全验证，测试完整权限控制
+    enabled: true
 
-# 管理端点（暴露所有可用端点）
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,prometheus  # 暴露更多监控端点
+        include: health,info,metrics,prometheus
   endpoint:
     health:
       enabled: true
-      show-details: always  # 显示详细健康信息
+      show-details: always
     metrics:
-      enabled: true  # 启用指标监控
+      enabled: true

@@ -32,6 +32,7 @@ public class AdminAttendanceController {
     @GetMapping("/session/{sessionId}")
     public ResponseEntity<List<Map<String, Object>>> getSessionAttendance(@PathVariable Long sessionId) {
         List<Attendance> list = attendanceRepository.findBySession_Id(sessionId);
+        LocalDateTime now = LocalDateTime.now();
 
         List<Map<String, Object>> result = list.stream().map(a -> {
             Map<String, Object> m = new HashMap<>();
@@ -41,7 +42,17 @@ public class AdminAttendanceController {
             m.put("sessionId", a.getSession().getId());
             m.put("checkInTime", a.getCheckInTime());
             m.put("checkOutTime", a.getCheckOutTime());
-            m.put("status", a.getStatus());
+
+            String status = a.getStatus();
+            if (a.getCheckInTime() != null
+                    && a.getCheckOutTime() == null
+                    && now.isAfter(a.getSession().getEndTime())) {
+                status = "NONE";
+            }
+            m.put("status", status);
+            m.put("earlyLeaveApproved", a.getEarlyLeaveApproved());
+            m.put("earlyLeaveReason", a.getEarlyLeaveReason());
+
             return m;
         }).toList();
 
@@ -51,6 +62,7 @@ public class AdminAttendanceController {
     @GetMapping("/session/{sessionId}/summary")
     public ResponseEntity<Map<String, Object>> getSessionAttendanceSummary(@PathVariable Long sessionId) {
         List<Attendance> list = attendanceRepository.findBySession_Id(sessionId);
+        LocalDateTime now = LocalDateTime.now();
 
         long onTime = list.stream()
                 .filter(a -> "ON_TIME".equals(a.getStatus()) || "PRESENT".equals(a.getStatus()))
@@ -60,8 +72,20 @@ public class AdminAttendanceController {
                 .filter(a -> "LATE".equals(a.getStatus()))
                 .count();
 
-        long earlyLeave = list.stream()
+        long earlyLeaveApproved = list.stream()
                 .filter(a -> "EARLY_LEAVE".equals(a.getStatus()))
+                .filter(a -> Boolean.TRUE.equals(a.getEarlyLeaveApproved()))
+                .count();
+
+        long earlyLeaveUnapproved = list.stream()
+                .filter(a -> "EARLY_LEAVE".equals(a.getStatus()))
+                .filter(a -> !Boolean.TRUE.equals(a.getEarlyLeaveApproved()))
+                .count();
+
+        long none = list.stream()
+                .filter(a -> a.getCheckInTime() != null)
+                .filter(a -> a.getCheckOutTime() == null)
+                .filter(a -> now.isAfter(a.getSession().getEndTime()))
                 .count();
 
         long totalCheckedIn = list.size();
@@ -73,7 +97,6 @@ public class AdminAttendanceController {
         long totalEnrolled = studentCourseRepository.countByCourse_Id(courseId);
 
         long absent = 0;
-        LocalDateTime now = LocalDateTime.now();
         if (now.isAfter(session.getEndTime()) && totalEnrolled > totalCheckedIn) {
             absent = totalEnrolled - totalCheckedIn;
         }
@@ -84,7 +107,9 @@ public class AdminAttendanceController {
         result.put("totalCheckedIn", totalCheckedIn);
         result.put("onTime", onTime);
         result.put("late", late);
-        result.put("earlyLeave", earlyLeave);
+        result.put("earlyLeave", earlyLeaveUnapproved);
+        result.put("earlyLeaveApproved", earlyLeaveApproved);
+        result.put("none", none);
         result.put("absent", absent);
 
         return ResponseEntity.ok(result);
