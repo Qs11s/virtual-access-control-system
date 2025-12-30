@@ -1,4 +1,3 @@
-/* src/frontend/style.css */
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: #f5f5f5;
@@ -6,7 +5,7 @@ body {
 }
 
 .container {
-  max-width: 480px;
+  max-width: 720px;
   margin: 40px auto;
   padding: 24px;
   background: #fff;
@@ -55,3 +54,120 @@ button {
   font-size: 0.9rem;
 }
 
+.view {
+  margin-top: 16px;
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.form-group {
+  margin-bottom: 12px;
+}
+
+.hint {
+  font-size: 0.85rem;
+  color: #666666;
+  margin-bottom: 8px;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.button-row,
+.link-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.button-row button,
+.link-row button {
+  width: auto;
+}
+
+button.secondary {
+  background: #f0f0f0;
+  border: 1px solid #cccccc;
+}
+
+button.danger {
+  background: #ffecec;
+  border: 1px solid #ffb3b3;
+}
+
+.message {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: #f5f5f5;
+  color: #444444;
+}
+
+.message-info {
+  background: #eef7ff;
+  color: #0b66c3;
+}
+
+.message-error {
+  background: #ffecec;
+  color: #d93025;
+}
+
+.message-success {
+  background: #e6f4ea;
+  color: #137333;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+  font-size: 0.9rem;
+}
+
+.table th,
+.table td {
+  border: 1px solid #e0e0e0;
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.table thead {
+  background: #fafafa;
+}
+
+.table button {
+  width: auto;
+  padding: 4px 8px;
+  font-size: 0.8rem;
+}
+
+.summary-row {
+  margin: 8px 0;
+  font-size: 0.9rem;
+  color: #333333;
+}
+
+.summary-row span {
+  margin-right: 4px;
+}
+
+@media (max-width: 600px) {
+  .container {
+    margin: 16px;
+    padding: 16px;
+  }
+}
